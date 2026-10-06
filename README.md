@@ -13,7 +13,7 @@ A small URL shortener used to demonstrate a complete DevOps toolchain built only
 | 3 | IaC + config management | OpenTofu (GCS state), Ansible | ✅ |
 | 4 | Kubernetes + GitOps CD | k3s, Helm, Flux CD (+ image automation), SOPS + age | ✅ |
 | 5 | Observability | Prometheus, Grafana, Loki, Alloy, Alertmanager, promtool alert tests | ✅ |
-| 6 | Polish | Traefik + cert-manager (TLS), k6 load tests, OWASP ZAP, runbook | ⏳ |
+| 6 | Polish | k6 load tests, OWASP ZAP, security headers, runbook ✅ · cert-manager + Let's Encrypt TLS ⏳ | 🟡 |
 
 ## Architecture
 
@@ -25,7 +25,7 @@ A small URL shortener used to demonstrate a complete DevOps toolchain built only
                                          └──► Redis (cache)
 ```
 
-See [docs/operations.md](docs/operations.md) for running the cluster.
+See [docs/operations.md](docs/operations.md) for running the cluster and [docs/runbook.md](docs/runbook.md) for what to do when an alert fires.
 
 ## Architecture (local compose stack)
 

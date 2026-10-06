@@ -33,11 +33,19 @@ echo "==> Click counted"
 clicks=$(curl -fsS "$BASE/api/links/$code" | python3 -c 'import json,sys; print(json.load(sys.stdin)["clicks"])')
 [[ $clicks == 2 ]] || fail "expected 2 clicks, got $clicks"
 
-echo "==> Metrics exposed"
-# Capture first: with pipefail, `curl | grep -q` fails at random when grep
-# exits on the first match and curl gets SIGPIPE writing the rest.
-metrics=$(curl -fsS "$BASE/metrics") || fail "metrics endpoint failed"
-grep -q '^shortener_links_created_total' <<<"$metrics" || fail "metric missing"
+# METRICS=public  (default): /metrics is served, e.g. the compose stack.
+# METRICS=blocked: behind the Kubernetes ingress, /metrics must be denied.
+if [[ "${METRICS:-public}" == blocked ]]; then
+  echo "==> Metrics blocked from outside"
+  status=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/metrics")
+  [[ $status == 403 ]] || fail "expected /metrics to be blocked (403), got $status"
+else
+  echo "==> Metrics exposed"
+  # Capture first: with pipefail, `curl | grep -q` fails at random when grep
+  # exits on the first match and curl gets SIGPIPE writing the rest.
+  metrics=$(curl -fsS "$BASE/metrics") || fail "metrics endpoint failed"
+  grep -q '^shortener_links_created_total' <<<"$metrics" || fail "metric missing"
+fi
 
 echo "==> Frontend served"
 index=$(curl -fsS "$BASE/") || fail "index page failed"

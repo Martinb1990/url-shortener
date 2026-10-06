@@ -1,0 +1,4 @@
+# OWASP ZAP baseline rule overrides (rule-id<TAB>IGNORE|WARN|FAIL<TAB>reason).
+# Anything not listed keeps its default; CI fails on any WARN or FAIL.
+10109	IGNORE	(Modern Web Application: informational, the frontend uses JavaScript by design)
+10049	IGNORE	(Storable and Cacheable Content: informational; the page and static assets are public and meant to be cacheable, API and redirects send no-store)

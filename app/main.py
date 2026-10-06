@@ -59,6 +59,39 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="URL Shortener", version=__version__, lifespan=lifespan)
+
+# Browser security headers (flagged by the OWASP ZAP baseline scan).
+SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
+    "Cross-Origin-Opener-Policy": "same-origin",
+    "Cross-Origin-Resource-Policy": "same-origin",
+}
+# The frontend uses only same-origin scripts and styles, no inline code.
+STRICT_CSP = (
+    "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; "
+    "connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+)
+# FastAPI's /docs and /redoc load Swagger/ReDoc from a CDN with inline scripts.
+DOCS_PATHS = ("/docs", "/redoc", "/openapi.json")
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.update(SECURITY_HEADERS)
+    path = request.url.path
+    if not path.startswith(DOCS_PATHS):
+        response.headers["Content-Security-Policy"] = STRICT_CSP
+        response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
+    # API responses and redirects must not be cached: stale data, uncounted clicks.
+    if path.startswith("/api/") or 300 <= response.status_code < 400:
+        response.headers["Cache-Control"] = "no-store"
+    return response
+
+
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 Instrumentator(excluded_handlers=["/metrics", "/healthz", "/readyz"]).instrument(app).expose(
     app, include_in_schema=False
