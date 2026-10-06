@@ -45,6 +45,7 @@ spec:
             {{- end }}
           startupProbe:
             httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 3   # the app needs ~3.5 s to start listening
             periodSeconds: 2
             failureThreshold: 60   # up to 120s: the app waits for Postgres at startup
           livenessProbe:
@@ -53,6 +54,13 @@ spec:
           readinessProbe:
             httpGet: { path: /readyz, port: http }
             periodSeconds: 5
+          # On shutdown, keep serving for a few seconds while the endpoint is
+          # removed from the Service and Traefik; without this, requests routed
+          # in that window hit a closed socket (measured: 6/298 failed per rollout).
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: {{ .Values.shutdownDelaySeconds }}
           resources: {{- toYaml .Values.resources | nindent 12 }}
           securityContext: {{- include "shortener.containerSecurity" . | nindent 12 }}
           volumeMounts:
