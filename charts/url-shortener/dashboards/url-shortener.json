@@ -28,7 +28,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(http_requests_total{job=\"__JOB__\", namespace=\"__NAMESPACE__\"}[5m]))",
+          "expr": "sum(rate(http_requests_total{job=\"__JOB__\", namespace=\"__NAMESPACE__\"}[5m])) or on() vector(0)",
           "legendFormat": "",
           "refId": "A",
           "datasource": {
@@ -69,7 +69,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(http_requests_total{job=\"__JOB__\", namespace=\"__NAMESPACE__\", status=\"5xx\"}[5m])) / sum(rate(http_requests_total{job=\"__JOB__\", namespace=\"__NAMESPACE__\"}[5m]))",
+          "expr": "((sum(rate(http_requests_total{job=\"__JOB__\", namespace=\"__NAMESPACE__\", status=\"5xx\"}[5m])) or on() vector(0)) / sum(rate(http_requests_total{job=\"__JOB__\", namespace=\"__NAMESPACE__\"}[5m]))) or on() vector(0)",
           "legendFormat": "",
           "refId": "A",
           "datasource": {
@@ -205,7 +205,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (handler) (rate(http_requests_total{job=\"__JOB__\", namespace=\"__NAMESPACE__\"}[5m]))",
+          "expr": "sum by (handler) (rate(http_requests_total{job=\"__JOB__\", namespace=\"__NAMESPACE__\"}[5m])) or on() label_replace(vector(0), \"handler\", \"no traffic\", \"\", \"\")",
           "legendFormat": "{{handler}}",
           "refId": "A",
           "datasource": {
@@ -287,7 +287,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (status) (rate(http_requests_total{job=\"__JOB__\", namespace=\"__NAMESPACE__\"}[5m]))",
+          "expr": "sum by (status) (rate(http_requests_total{job=\"__JOB__\", namespace=\"__NAMESPACE__\"}[5m])) or on() label_replace(vector(0), \"status\", \"no traffic\", \"\", \"\")",
           "legendFormat": "{{status}}",
           "refId": "A",
           "datasource": {
@@ -319,7 +319,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (result, source) (rate(shortener_redirects_total{job=\"__JOB__\", namespace=\"__NAMESPACE__\"}[5m]))",
+          "expr": "sum by (result, source) (rate(shortener_redirects_total{job=\"__JOB__\", namespace=\"__NAMESPACE__\"}[5m])) or on() label_replace(label_replace(vector(0), \"result\", \"no\", \"\", \"\"), \"source\", \"redirects\", \"\", \"\")",
           "legendFormat": "{{result}} via {{source}}",
           "refId": "A",
           "datasource": {

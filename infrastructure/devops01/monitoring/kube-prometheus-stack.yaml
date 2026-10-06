@@ -142,6 +142,13 @@ spec:
         requests: { cpu: 10m, memory: 32Mi }
         limits: { memory: 96Mi }
 
+    # Only Linux nodes here: drop the AIX and macOS node dashboards, which
+    # can never show data.
+    nodeExporter:
+      operatingSystems:
+        aix: { enabled: false }
+        darwin: { enabled: false }
+
     prometheus-node-exporter:
       resources:
         requests: { cpu: 10m, memory: 24Mi }
