@@ -30,7 +30,9 @@
     dest: /etc/rancher/k3s/config.yaml
     owner: root
     group: root
-    mode: "0600"
+    # World-readable on purpose: holds no secrets, and k3s's bundled kubectl
+    # reads it on every invocation (warns when it can't).
+    mode: "0644"
   notify: Restart k3s
 
 - name: Install firewall pre-start script
@@ -81,3 +83,14 @@
     group: "{{ k3s_kubeconfig_user }}"
     mode: "0600"
   when: not ansible_check_mode
+
+- name: Point kubectl at the user kubeconfig
+  # k3s's bundled kubectl ignores ~/.kube/config unless KUBECONFIG is set.
+  ansible.builtin.copy:
+    dest: /etc/profile.d/kubeconfig.sh
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # {{ ansible_managed }}
+      export KUBECONFIG="$HOME/.kube/config"

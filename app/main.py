@@ -1,6 +1,7 @@
 import logging
 import secrets
 import string
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -10,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from prometheus_client import Counter
 from prometheus_fastapi_instrumentator import Instrumentator
 from sqlalchemy import select, text, update
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 
 from app import __version__, cache
@@ -30,10 +31,27 @@ LINKS_CREATED = Counter("shortener_links_created_total", "Short links created")
 REDIRECTS = Counter("shortener_redirects_total", "Redirect lookups", ["result", "source"])
 
 
+def init_db(attempts: int = 30, delay: float = 2.0) -> None:
+    """Create tables, waiting for the database to accept connections.
+
+    In Kubernetes the app often starts before Postgres is ready; retrying here
+    avoids crash-looping on every deploy.
+    """
+    # Schema management stays simple for now; Alembic migrations can replace this later.
+    for attempt in range(1, attempts + 1):
+        try:
+            Base.metadata.create_all(engine)
+            return
+        except OperationalError as exc:
+            if attempt == attempts:
+                raise
+            log.warning("database not ready (attempt %d/%d): %s", attempt, attempts, exc.orig)
+            time.sleep(delay)
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    # Phase 1 keeps schema management simple; Alembic migrations can replace this later.
-    Base.metadata.create_all(engine)
+    init_db()
     yield
 
 

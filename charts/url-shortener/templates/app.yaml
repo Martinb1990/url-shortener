@@ -46,7 +46,7 @@ spec:
           startupProbe:
             httpGet: { path: /healthz, port: http }
             periodSeconds: 2
-            failureThreshold: 30
+            failureThreshold: 60   # up to 120s: the app waits for Postgres at startup
           livenessProbe:
             httpGet: { path: /healthz, port: http }
             periodSeconds: 10

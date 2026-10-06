@@ -11,11 +11,23 @@ A small URL shortener used to demonstrate a complete DevOps toolchain built only
 | 1 | App + containers | FastAPI, PostgreSQL, Redis, Docker, Compose | ✅ |
 | 2 | CI + DevSecOps | GitHub Actions, Ruff, pytest, Trivy, gitleaks, Semgrep, GHCR, Dependabot, pre-commit | ✅ |
 | 3 | IaC + config management | OpenTofu (GCS state), Ansible | ✅ |
-| 4 | Kubernetes + GitOps CD | k3s, Helm, Flux CD, Sealed Secrets | ⏳ |
+| 4 | Kubernetes + GitOps CD | k3s, Helm, Flux CD (+ image automation), SOPS + age | ✅ |
 | 5 | Observability | Prometheus, Grafana, Loki, Alertmanager | ⏳ |
 | 6 | Polish | Traefik + cert-manager (TLS), k6 load tests, OWASP ZAP, runbook | ⏳ |
 
-## Architecture (phase 1)
+## Architecture
+
+```
+ PR merged ─► CI: test, scan, build, e2e on k3d ─► ghcr.io/…:main-<timestamp>-<sha>
+                                                               │ scanned every 2m
+ gcp-devops01 (k3s) ◄── Flux ◄── git (main) ◄── Flux commits new tag ┘
+   └─ ns url-shortener:  Traefik ─► app ×2 ─► Postgres (PVC)
+                                         └──► Redis (cache)
+```
+
+See [docs/operations.md](docs/operations.md) for running the cluster.
+
+## Architecture (local compose stack)
 
 ```
 browser ──► app (FastAPI :8000) ──► Redis   (cache: code → URL)
