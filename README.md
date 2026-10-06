@@ -1,0 +1,70 @@
+# Shortly: URL Shortener (a DevOps showcase project)
+
+A small URL shortener used to demonstrate a complete DevOps toolchain built only from free, open-source tools, running on a single VM (`gcp-devops01`).
+
+## Roadmap
+
+| Phase | Scope | Tools | Status |
+|---|---|---|---|
+| 1 | App + containers | FastAPI, PostgreSQL, Redis, Docker, Compose | ✅ |
+| 2 | CI + DevSecOps | GitHub Actions, Ruff, pytest, Trivy, gitleaks, Semgrep, GHCR | ⏳ |
+| 3 | IaC + config management | OpenTofu, Ansible | ⏳ |
+| 4 | Kubernetes + GitOps CD | k3s, Helm, Flux CD, Sealed Secrets | ⏳ |
+| 5 | Observability | Prometheus, Grafana, Loki, Alertmanager | ⏳ |
+| 6 | Polish | Traefik + cert-manager (TLS), k6 load tests, OWASP ZAP, runbook | ⏳ |
+
+## Architecture (phase 1)
+
+```
+browser ──► app (FastAPI :8000) ──► Redis   (cache: code → URL)
+                     │
+                     └──────────► PostgreSQL (links, click counts)
+```
+
+## API
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/api/links` | Create a link: `{"url": "https://…", "custom_code": "optional"}` |
+| `GET` | `/api/links?limit=10` | Most recent links |
+| `GET` | `/api/links/{code}` | Stats for one link |
+| `GET` | `/{code}` | 307 redirect to the target (counts a click; `HEAD` doesn't count) |
+| `GET` | `/healthz` | Liveness probe |
+| `GET` | `/readyz` | Readiness probe (checks DB + Redis) |
+| `GET` | `/metrics` | Prometheus metrics |
+| `GET` | `/docs` | Interactive OpenAPI docs |
+
+## Quick start
+
+### Run with Docker (full stack)
+
+```bash
+sudo ./scripts/bootstrap-host.sh   # one time: Docker + 4 GB swap
+make up                            # builds the image, starts app + Postgres + Redis
+open http://localhost:8000
+```
+
+### Local development (no Docker)
+
+```bash
+make venv   # virtualenv + dev dependencies
+make test   # pytest + coverage
+make lint   # ruff
+make run    # http://127.0.0.1:8000, uses SQLite, no Redis
+```
+
+## Configuration
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `DATABASE_URL` | `sqlite:///./shortener.db` | SQLAlchemy URL |
+| `REDIS_URL` | *(empty, cache disabled)* | Redis URL for the lookup cache |
+| `CACHE_TTL_SECONDS` | `3600` | Cache entry lifetime |
+| `CODE_LENGTH` | `7` | Length of generated codes |
+
+## Design notes
+
+- **12-factor config:** settings come from environment variables only.
+- **Cache is optional:** if Redis is unreachable, lookups fall back to Postgres and `/readyz` reports it.
+- **Container hardening:** multi-stage build, slim base image, non-root UID 10001, healthcheck, memory limits.
+- **Metrics:** HTTP latency and counts come from `prometheus-fastapi-instrumentator`; business metrics are `shortener_links_created_total` and `shortener_redirects_total{result,source}`.

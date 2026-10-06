@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shortly</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Shortly</h1>
+      <p class="tagline">Long links in, short links out.</p>
+    </header>
+
+    <form id="shorten-form" autocomplete="off">
+      <label for="url" class="sr-only">Long URL</label>
+      <input id="url" name="url" type="url" placeholder="https://example.com/a/very/long/link" required>
+      <label for="custom_code" class="sr-only">Custom code (optional)</label>
+      <input id="custom_code" name="custom_code" type="text" placeholder="custom-code (optional)"
+             pattern="[A-Za-z0-9_\-]{3,32}" title="3–32 letters, digits, - or _">
+      <button type="submit">Shorten</button>
+    </form>
+
+    <p id="error" class="error" role="alert" hidden></p>
+
+    <section id="result" class="result" hidden>
+      <a id="short-url" target="_blank" rel="noopener"></a>
+      <button id="copy" type="button">Copy</button>
+    </section>
+
+    <section class="recent">
+      <h2>Recent links</h2>
+      <table>
+        <thead><tr><th>Short</th><th>Destination</th><th class="num">Clicks</th></tr></thead>
+        <tbody id="recent-body"><tr><td colspan="3" class="muted">Nothing yet.</td></tr></tbody>
+      </table>
+    </section>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>
