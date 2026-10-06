@@ -21,7 +21,7 @@ fmt: ## Auto-format code
 	$(BIN)/ruff format .
 
 test: ## Run tests with coverage
-	$(BIN)/pytest --cov=app --cov-report=term-missing
+	$(BIN)/pytest --cov=app --cov-report=term-missing --cov-fail-under=80
 
 up: ## Build and start the Docker stack
 	@test -f .env || cp .env.example .env
