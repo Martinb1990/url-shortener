@@ -4,6 +4,7 @@ resources:
   - namespace.yaml
   - helmrepositories.yaml
   - grafana-admin.sops.yaml
+  - alertmanager-discord.sops.yaml
   - kube-prometheus-stack.yaml
   - loki.yaml
   - alloy.yaml
