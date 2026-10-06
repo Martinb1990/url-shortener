@@ -5,7 +5,7 @@ Two layers, two tools:
 | Layer | Tool | Manages |
 |---|---|---|
 | Cloud resources | **OpenTofu** (`infra/tofu`) | The VM, its static IP, all firewall rules |
-| Inside the VM | **Ansible** (`infra/ansible`) | Packages, swap, Docker, SSH tunnel exception |
+| Inside the VM | **Ansible** (`infra/ansible`) | Packages, swap, Docker, k3s, cluster CLIs (flux, helm, sops, age, k9s), SSH tunnel exception |
 
 OS hardening (SSH, firewall, auditd, sysctls) stays with
 [server-baseline](../../server-baseline). Ansible only adds what this project
@@ -14,7 +14,12 @@ needs on top and never edits the baseline's files.
 ## OpenTofu
 
 The VM was created by hand, so it is **imported**, not created: the first
-`apply` adopts it into state. `prevent_destroy` and `deletion_protection`
+`apply` adopts it into state. Size: `e2-standard-2` (e2-medium ran out of CPU
+and memory once monitoring was added).
+
+**Changes that stop the VM** (e.g. `machine_type`) must not be applied from the
+VM itself, because the run would kill itself. Apply them with `gcloud` from Cloud
+Shell, then confirm `tofu plan` reports no changes. `prevent_destroy` and `deletion_protection`
 guard against accidental deletion.
 
 State lives in a versioned GCS bucket (`<project>-tfstate`, in the
@@ -39,7 +44,11 @@ make ansible-check   # dry run with diff
 make ansible-apply
 ```
 
+Roles: `common`, `swap`, `docker`, `ssh_tunnel` (ports 8000, 3000, 80, 4466 to localhost only), `k3s`, `cluster_tools`.
+
 Run a single role with tags, e.g. `ansible-playbook site.yml -K --tags docker`.
+
+Ubuntu 26.04 defaults to **sudo-rs**, whose password prompt Ansible doesn't recognise, so the inventory sets `ansible_become_exe: sudo.ws` (classic sudo).
 
 ## Accepted risks
 
