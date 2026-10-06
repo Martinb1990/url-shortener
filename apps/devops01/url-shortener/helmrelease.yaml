@@ -31,4 +31,4 @@ spec:
       dashboard: {enabled: true}
     image:
       # Updated by Flux image automation; don't edit the marker comment.
-      tag: main-20261006201746-ce6c973 # {"$imagepolicy": "flux-system:url-shortener:tag"}
+      tag: main-20261006204737-ab46b36 # {"$imagepolicy": "flux-system:url-shortener:tag"}
