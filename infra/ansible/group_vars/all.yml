@@ -8,8 +8,8 @@ docker_log_max_size: 10m
 docker_log_max_file: "3"
 
 # Ports reachable through the SSH tunnel: compose app (8000), Grafana (3000),
-# k3s ingress (80).
-ssh_tunnel_ports: [8000, 3000, 80]
+# k3s ingress (80), Headlamp (4466).
+ssh_tunnel_ports: [8000, 3000, 80, 4466]
 
 common_packages:
   - curl

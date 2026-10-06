@@ -17,6 +17,22 @@
 3. Flux scans GHCR every 2 minutes, picks the newest `main-*` tag, and commits it to `apps/devops01/url-shortener/helmrelease.yaml` (author `fluxcdbot`).
 4. Flux applies the HelmRelease. Pods roll one at a time (`maxUnavailable: 0`), and a release whose pods never become ready is rolled back automatically.
 
+## Consoles
+
+| Tool | What | How to reach it |
+|---|---|---|
+| **Headlamp** | Web console: browse/edit workloads, logs, exec into pods, restart | `ssh -L 4466:localhost:4466 <user>@34.89.12.210`, then http://localhost:4466 |
+| **k9s** | Terminal UI on the VM | `k9s` (`:pods`, `:deploy`, `l` logs, `d` describe, `s` shell, `ctrl-d` delete, `?` help) |
+| **Grafana** | Metrics, dashboards, logs | `ssh -L 3000:localhost:3000 ...`, then http://localhost:3000 |
+
+Headlamp login: paste a short-lived token for the `headlamp-admin` ServiceAccount (**cluster-admin**: full rights, owner's choice):
+
+```bash
+kubectl -n headlamp create token headlamp-admin --duration=12h
+```
+
+Headlamp's own ServiceAccount has no cluster rights, so reaching the page without a token grants nothing. Revoke all outstanding tokens at once by deleting and recreating the ServiceAccount (`kubectl -n headlamp delete sa headlamp-admin`; Flux recreates it).
+
 ## Day-to-day
 
 ```bash

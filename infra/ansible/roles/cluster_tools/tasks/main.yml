@@ -47,3 +47,20 @@
     owner: root
     group: root
     mode: "0755"
+
+- name: Download k9s (terminal UI for Kubernetes)
+  ansible.builtin.get_url:
+    url: "https://github.com/derailed/k9s/releases/download/v{{ cluster_tools_k9s_version }}/k9s_Linux_amd64.tar.gz"
+    checksum: "sha256:https://github.com/derailed/k9s/releases/download/v{{ cluster_tools_k9s_version }}/checksums.sha256"
+    dest: "/tmp/k9s_{{ cluster_tools_k9s_version }}.tar.gz"
+    mode: "0644"
+
+- name: Install k9s
+  ansible.builtin.unarchive:
+    src: "/tmp/k9s_{{ cluster_tools_k9s_version }}.tar.gz"
+    dest: /usr/local/bin
+    remote_src: true
+    include: [k9s]
+    owner: root
+    group: root
+    mode: "0755"
