@@ -20,13 +20,16 @@ services:
     mem_limit: 256m
 
   db:
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      # Postgres 18+ keeps data in a versioned subdirectory (/var/lib/postgresql/18/docker),
+      # so the volume mounts one level up. The volume name carries the major version:
+      # a major upgrade gets a fresh volume instead of crashing on old-format data.
+      - pgdata18:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
@@ -47,4 +50,4 @@ services:
     mem_limit: 96m
 
 volumes:
-  pgdata:
+  pgdata18:
