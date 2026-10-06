@@ -29,9 +29,8 @@ spec:
       host: shortly-martin.duckdns.org
       tls:
         enabled: true
-        # Staging first (no rate-limit risk); switch to letsencrypt-prod once
-        # a staging certificate has been issued.
-        clusterIssuer: letsencrypt-staging
+        # Validated with letsencrypt-staging first (issued in ~30s).
+        clusterIssuer: letsencrypt-prod
       rateLimit:
         enabled: true
     monitoring:
