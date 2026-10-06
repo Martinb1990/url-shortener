@@ -1,0 +1,7 @@
+# SOPS encrypts only the data fields of *.sops.yaml Secrets, with the
+# cluster's age public key. The private key lives in the cluster
+# (secret flux-system/sops-age) and in the operator's backup, never in git.
+creation_rules:
+  - path_regex: .*\.sops\.yaml$
+    encrypted_regex: ^(data|stringData)$
+    age: age143zk4xcwfzwsyahkuwx5ednndsqhx88tfgkh5xs9mlpgjq04tscssa42t8

@@ -1,0 +1,26 @@
+# {{ ansible_managed }}
+# Equivalent to the unit get.k3s.io installs, plus the firewall pre-step.
+[Unit]
+Description=Lightweight Kubernetes (k3s)
+Documentation=https://k3s.io
+Wants=network-online.target
+After=network-online.target netfilter-persistent.service docker.service
+
+[Service]
+Type=notify
+KillMode=process
+Delegate=yes
+LimitNOFILE=1048576
+LimitNPROC=infinity
+LimitCORE=infinity
+TasksMax=infinity
+TimeoutStartSec=0
+Restart=always
+RestartSec=5s
+ExecStartPre=-/sbin/modprobe br_netfilter
+ExecStartPre=-/sbin/modprobe overlay
+ExecStartPre=/usr/local/sbin/k3s-firewall.sh
+ExecStart=/usr/local/bin/k3s server
+
+[Install]
+WantedBy=multi-user.target

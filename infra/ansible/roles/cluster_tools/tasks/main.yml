@@ -1,0 +1,49 @@
+# CLIs for operating the cluster. Every download is checksum-verified.
+- name: Install age (SOPS encryption backend)
+  ansible.builtin.apt:
+    name: age
+    state: present
+
+- name: Install sops
+  ansible.builtin.get_url:
+    url: "https://github.com/getsops/sops/releases/download/v{{ cluster_tools_sops_version }}/sops-v{{ cluster_tools_sops_version }}.linux.amd64"
+    checksum: "sha256:https://github.com/getsops/sops/releases/download/v{{ cluster_tools_sops_version }}/sops-v{{ cluster_tools_sops_version }}.checksums.txt"
+    dest: /usr/local/bin/sops
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Download flux CLI
+  ansible.builtin.get_url:
+    url: "https://github.com/fluxcd/flux2/releases/download/v{{ cluster_tools_flux_version }}/flux_{{ cluster_tools_flux_version }}_linux_amd64.tar.gz"
+    checksum: "sha256:https://github.com/fluxcd/flux2/releases/download/v{{ cluster_tools_flux_version }}/flux_{{ cluster_tools_flux_version }}_checksums.txt"
+    dest: "/tmp/flux_{{ cluster_tools_flux_version }}.tar.gz"
+    mode: "0644"
+
+- name: Install flux CLI
+  ansible.builtin.unarchive:
+    src: "/tmp/flux_{{ cluster_tools_flux_version }}.tar.gz"
+    dest: /usr/local/bin
+    remote_src: true
+    include: [flux]
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Download helm
+  ansible.builtin.get_url:
+    url: "https://get.helm.sh/helm-v{{ cluster_tools_helm_version }}-linux-amd64.tar.gz"
+    checksum: "sha256:https://get.helm.sh/helm-v{{ cluster_tools_helm_version }}-linux-amd64.tar.gz.sha256sum"
+    dest: "/tmp/helm_{{ cluster_tools_helm_version }}.tar.gz"
+    mode: "0644"
+
+- name: Install helm
+  ansible.builtin.unarchive:
+    src: "/tmp/helm_{{ cluster_tools_helm_version }}.tar.gz"
+    dest: /usr/local/bin
+    remote_src: true
+    include: [linux-amd64/helm]
+    extra_opts: [--strip-components=1]
+    owner: root
+    group: root
+    mode: "0755"

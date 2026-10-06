@@ -1,0 +1,15 @@
+# Accepted Trivy findings. Each entry is scoped to specific paths and
+# explains why; the same finding anywhere else still fails the build.
+misconfigurations:
+  - id: KSV-0046
+    paths:
+      - clusters/devops01/flux-system/gotk-components.yaml
+    statement: >
+      Flux is the GitOps operator: it applies whatever is declared in git, so
+      its controllers need cluster-wide rights. Upstream-generated manifest
+      (flux install --export); access to the cluster is gated by PR review.
+  - id: KSV-0041
+    paths:
+      - clusters/devops01/flux-system/gotk-components.yaml
+    statement: >
+      Flux must manage Secrets (SOPS-decrypted app secrets, Helm release state).

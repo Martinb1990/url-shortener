@@ -1,0 +1,54 @@
+# Continuous deployment: CI on main publishes ghcr.io/martinb1990/url-shortener
+# tagged main-<UTC timestamp>-<sha>. Flux scans the registry, picks the newest
+# tag, rewrites helmrelease.yaml in git, and the HelmRelease rolls it out.
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageRepository
+metadata:
+  name: url-shortener
+  namespace: flux-system
+spec:
+  image: ghcr.io/martinb1990/url-shortener
+  interval: 2m
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: url-shortener
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: url-shortener
+  filterTags:
+    pattern: '^main-(?P<ts>[0-9]{14})-[a-f0-9]+$'
+    extract: '$ts'
+  policy:
+    numerical:
+      order: asc
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageUpdateAutomation
+metadata:
+  name: url-shortener
+  namespace: flux-system
+spec:
+  interval: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  git:
+    checkout:
+      ref:
+        branch: main
+    commit:
+      author:
+        name: fluxcdbot
+        email: fluxcdbot@users.noreply.github.com
+      messageTemplate: |
+        deploy: url-shortener {{ range .Changed.Changes }}{{ .NewValue }}{{ end }}
+
+        Automated image update by Flux.
+    push:
+      branch: main
+  update:
+    path: ./apps/devops01
+    strategy: Setters

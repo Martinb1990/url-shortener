@@ -1,0 +1,13 @@
+# {{ ansible_managed }}
+node-name: {{ inventory_hostname }}
+cluster-cidr: {{ k3s_pod_cidr }}
+service-cidr: {{ k3s_service_cidr }}
+write-kubeconfig-mode: "0600"
+# Encrypt Secrets at rest in the cluster datastore.
+secrets-encryption: true
+kubelet-arg:
+  # The host has swap (small VM); don't refuse to start because of it.
+  - fail-swap-on=false
+  # Keep memory back for the OS, sshd and Docker; evict pods before the OOM killer acts.
+  - system-reserved=memory=300Mi
+  - eviction-hard=memory.available<150Mi,nodefs.available<10%

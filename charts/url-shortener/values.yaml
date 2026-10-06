@@ -1,0 +1,48 @@
+# -- App ------------------------------------------------------------------
+image:
+  repository: ghcr.io/martinb1990/url-shortener
+  tag: ""            # defaults to the chart appVersion; Flux sets it per deploy
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+resources:
+  requests: { cpu: 50m, memory: 96Mi }
+  limits: { memory: 256Mi }
+
+env:
+  CACHE_TTL_SECONDS: "3600"
+  CODE_LENGTH: "7"
+
+ingress:
+  enabled: true
+  className: traefik
+  host: ""           # empty = match any host (reach it via the node IP / tunnel)
+
+# Secret holding the Postgres password (key: postgres-password).
+# In the cluster it comes from a SOPS-encrypted manifest; for tests the chart
+# can create one from `create.password`.
+dbSecret:
+  name: url-shortener-db
+  create:
+    enabled: false
+    password: ""
+
+# -- PostgreSQL -------------------------------------------------------------
+postgres:
+  image: postgres:18-alpine
+  user: shortener
+  database: shortener
+  storage: 2Gi
+  storageClassName: local-path
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits: { memory: 256Mi }
+
+# -- Redis ------------------------------------------------------------------
+redis:
+  image: redis:8-alpine
+  maxmemory: 48mb
+  resources:
+    requests: { cpu: 20m, memory: 16Mi }
+    limits: { memory: 80Mi }

@@ -86,3 +86,34 @@ def test_index_page(client):
     res = client.get("/")
     assert res.status_code == 200
     assert "Shortly" in res.text
+
+
+def test_init_db_retries_until_database_is_ready(monkeypatch):
+    from sqlalchemy.exc import OperationalError
+
+    from app import main
+
+    calls = []
+
+    def flaky_create_all(_engine):
+        calls.append(1)
+        if len(calls) < 3:
+            raise OperationalError("SELECT 1", {}, Exception("connection refused"))
+
+    monkeypatch.setattr(main.Base.metadata, "create_all", flaky_create_all)
+    main.init_db(attempts=5, delay=0)
+    assert len(calls) == 3
+
+
+def test_init_db_gives_up_after_max_attempts(monkeypatch):
+    import pytest
+    from sqlalchemy.exc import OperationalError
+
+    from app import main
+
+    def always_down(_engine):
+        raise OperationalError("SELECT 1", {}, Exception("connection refused"))
+
+    monkeypatch.setattr(main.Base.metadata, "create_all", always_down)
+    with pytest.raises(OperationalError):
+        main.init_db(attempts=2, delay=0)

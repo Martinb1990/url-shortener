@@ -3,6 +3,10 @@ name: CI
 on:
   push:
     branches: [main]
+    # Flux commits image-tag bumps here; rebuilding on those would loop forever.
+    # Changes to these paths are still fully checked on their pull requests.
+    paths-ignore:
+      - "apps/devops01/**"
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -19,6 +23,11 @@ env:
   PYTHON_VERSION: "3.13"
   TRIVY_IMAGE: aquasec/trivy:0.75.0
   SEMGREP_IMAGE: semgrep/semgrep:1.179.0
+  HELM_VERSION: v4.3.0
+  KUBECONFORM_VERSION: v0.8.0
+  K3D_VERSION: v5.9.0
+  K3D_SHA256: 06d8f25bc3a971c4eb29e0ff08429b180402db0f4dec838c9eac427e296800a0
+  K3S_IMAGE: rancher/k3s:v1.36.5-k3s1
   GITLEAKS_IMAGE: zricethezav/gitleaks:v8.30.1
 
 jobs:
@@ -92,6 +101,38 @@ jobs:
           ansible-playbook site.yml --syntax-check
           ansible-lint
 
+  k8s-manifests:
+    name: Kubernetes manifests (Helm + Flux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install helm + kubeconform
+        run: |
+          curl -fsSL "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz" -o helm.tgz
+          curl -fsSL "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz.sha256sum" | sed 's/ .*/  helm.tgz/' | sha256sum -c -
+          tar xzf helm.tgz --strip-components=1 -C /usr/local/bin linux-amd64/helm
+          curl -fsSL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" | tar xz -C /usr/local/bin kubeconform
+      - name: helm lint
+        run: helm lint charts/url-shortener --strict --set dbSecret.create.enabled=true --set dbSecret.create.password=ci
+      - name: Validate rendered chart
+        run: >
+          helm template ci charts/url-shortener --set dbSecret.create.enabled=true --set dbSecret.create.password=ci
+          | kubeconform -strict -summary -kubernetes-version 1.36.0
+      - name: Validate Flux manifests
+        run: >
+          kubeconform -strict -summary -kubernetes-version 1.36.0
+          -ignore-filename-pattern kustomization.yaml -skip Secret,CustomResourceDefinition
+          -schema-location default
+          -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+          clusters apps
+      - name: Secrets in apps/ must be SOPS-encrypted
+        run: |
+          bad=0
+          for f in $(grep -rl '^kind: Secret' apps clusters || true); do
+            grep -q '^sops:' "$f" || { echo "::error file=$f::Secret is not SOPS-encrypted"; bad=1; }
+          done
+          exit $bad
+
   # --------------------------------------------------------------- security
   secrets:
     name: Secret scan (gitleaks)
@@ -138,7 +179,7 @@ jobs:
       - name: Trivy filesystem scan (report)
         run: >
           docker run --rm -v "$PWD:/src" -v trivy-cache:/root/.cache/trivy
-          "$TRIVY_IMAGE" fs --scanners vuln,misconfig,secret
+          "$TRIVY_IMAGE" fs --ignorefile /src/.trivyignore.yaml --scanners vuln,misconfig,secret
           --format sarif --output /src/trivy-fs.sarif /src
       - name: Upload results to GitHub Security tab
         if: always() && hashFiles('trivy-fs.sarif') != ''
@@ -149,13 +190,13 @@ jobs:
       - name: Trivy filesystem scan (gate on HIGH/CRITICAL)
         run: >
           docker run --rm -v "$PWD:/src" -v trivy-cache:/root/.cache/trivy
-          "$TRIVY_IMAGE" fs --scanners vuln,misconfig,secret
+          "$TRIVY_IMAGE" fs --ignorefile /src/.trivyignore.yaml --scanners vuln,misconfig,secret
           --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 /src
 
   # ------------------------------------------------------- build & publish
   image:
     name: Build, scan, smoke test, publish
-    needs: [lint, test, infra, secrets, sast, deps-and-config]
+    needs: [lint, test, infra, k8s-manifests, secrets, sast, deps-and-config]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -175,6 +216,8 @@ jobs:
             type=sha,prefix=sha-
             type=ref,event=pr
             type=raw,value=latest,enable={{is_default_branch}}
+            # Sortable tag that Flux image automation deploys (see apps/devops01).
+            type=raw,value=main-{{date 'YYYYMMDDHHmmss' tz='UTC'}}-{{sha}},enable={{is_default_branch}}
 
       - name: Build image (load locally for scanning)
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
@@ -221,6 +264,31 @@ jobs:
       - name: Compose logs on failure
         if: failure()
         run: docker compose logs --no-color
+      - name: Stop compose stack
+        run: docker compose down -v
+
+      - name: Install k3d + helm
+        run: |
+          curl -fsSL -o /usr/local/bin/k3d "https://github.com/k3d-io/k3d/releases/download/${K3D_VERSION}/k3d-linux-amd64"
+          echo "${K3D_SHA256}  /usr/local/bin/k3d" | sha256sum -c -
+          chmod +x /usr/local/bin/k3d
+          curl -fsSL "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz" | tar xz --strip-components=1 -C /usr/local/bin linux-amd64/helm
+      - name: E2E on Kubernetes (k3d, same k3s version as production)
+        run: |
+          k3d cluster create e2e --image "$K3S_IMAGE" --agents 0 -p "8080:80@loadbalancer" --wait
+          k3d image import url-shortener:local -c e2e
+          kubectl create namespace e2e
+          kubectl label namespace e2e pod-security.kubernetes.io/enforce=restricted
+          helm install e2e charts/url-shortener -n e2e --wait --timeout 4m \
+            --set image.repository=url-shortener --set image.tag=local --set image.pullPolicy=Never \
+            --set dbSecret.create.enabled=true --set dbSecret.create.password="$(openssl rand -hex 16)"
+          kubectl -n e2e get pods -o wide
+          ./scripts/smoke-test.sh http://localhost:8080
+      - name: Kubernetes diagnostics on failure
+        if: failure()
+        run: |
+          kubectl -n e2e get all,pvc,events --sort-by=.lastTimestamp || true
+          kubectl -n e2e logs -l app.kubernetes.io/instance=e2e --all-containers --tail=50 || true
 
       - name: Log in to GHCR
         if: github.event_name != 'pull_request'
