@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/Martinb1990/url-shortener/actions/workflows/ci.yml/badge.svg)](https://github.com/Martinb1990/url-shortener/actions/workflows/ci.yml)
 
+**Live:** https://shortly-martin.duckdns.org
+
 A small URL shortener used to demonstrate a complete DevOps toolchain built only from free, open-source tools, running on a single VM (`gcp-devops01`).
 
 ## Roadmap

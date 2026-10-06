@@ -27,14 +27,14 @@ kubectl -n url-shortener get pods
 kubectl -n url-shortener logs deploy/url-shortener -f
 ```
 
-Reach the app from your computer: `ssh -L 8080:localhost:80 <user>@34.89.12.210`, then open http://localhost:8080.
+The app is public at **https://shortly-martin.duckdns.org** (Let's Encrypt via cert-manager, HTTP redirects to HTTPS, HSTS, per-IP rate limits). Internal UIs stay private behind the SSH tunnel: `ssh -L 3000:localhost:3000 <user>@34.89.12.210`, then Grafana at http://localhost:3000.
 
 ## Observability
 
 | Tool | What | Where |
 |---|---|---|
 | Prometheus | Metrics: app (via ServiceMonitor), Kubernetes, node. 3 days / 3 GB retention | in-cluster only |
-| Grafana | Dashboards + Explore for metrics and logs | http://grafana.localhost:8080 (through the tunnel) |
+| Grafana | Dashboards + Explore for metrics and logs | http://localhost:3000 through the tunnel (`-L 3000:localhost:3000`); not on the public ingress |
 | Loki + Alloy | Logs from every pod, 3 days | Grafana → Explore → Loki |
 | Alertmanager | Routes alerts (currently to a null receiver) | in-cluster only |
 

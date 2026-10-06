@@ -110,12 +110,16 @@ spec:
       resources:
         requests: { cpu: 50m, memory: 320Mi }
         limits: { memory: 768Mi }
+      # Not on the ingress: once 80/443 are public, a request with
+      # "Host: grafana.localhost" would reach it from anywhere. Instead k3s
+      # servicelb serves it on node port 3000, which the GCP firewall keeps
+      # closed to the internet; reach it through the SSH tunnel
+      # (-L 3000:localhost:3000) at http://localhost:3000
       ingress:
-        enabled: true
-        ingressClassName: traefik
-        # *.localhost resolves to 127.0.0.1 in browsers: reach it through the
-        # SSH tunnel at http://grafana.localhost:8080
-        hosts: ["grafana.localhost"]
+        enabled: false
+      service:
+        type: LoadBalancer
+        port: 3000
       grafana.ini:
         analytics:
           reporting_enabled: false
