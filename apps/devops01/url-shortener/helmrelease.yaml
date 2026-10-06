@@ -27,4 +27,4 @@ spec:
   values:
     image:
       # Updated by Flux image automation; don't edit the marker comment.
-      tag: main-20261006190752-ffe3136 # {"$imagepolicy": "flux-system:url-shortener:tag"}
+      tag: main-20261006192841-eb49049 # {"$imagepolicy": "flux-system:url-shortener:tag"}
