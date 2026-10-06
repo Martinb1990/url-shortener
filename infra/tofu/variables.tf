@@ -39,7 +39,7 @@ variable "web_source_ranges" {
 }
 
 variable "enable_web" {
-  description = "Open ports 80/443 to the VM. Keep false until TLS is configured (phase 6)."
+  description = "Open ports 80/443 to the VM (Traefik ingress; HTTPS via cert-manager)."
   type        = bool
-  default     = false
+  default     = true
 }

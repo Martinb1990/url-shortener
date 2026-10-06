@@ -1,0 +1,13 @@
+# Overrides for the Traefik that k3s installs itself (kube-system).
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    service:
+      spec:
+        # Keep the client's real source IP (single node, so no imbalance);
+        # per-IP rate limiting and access logs need it.
+        externalTrafficPolicy: Local

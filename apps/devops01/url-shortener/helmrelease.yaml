@@ -25,6 +25,15 @@ spec:
       retries: 3
       remediateLastFailure: true
   values:
+    ingress:
+      host: shortly-martin.duckdns.org
+      tls:
+        enabled: true
+        # Staging first (no rate-limit risk); switch to letsencrypt-prod once
+        # a staging certificate has been issued.
+        clusterIssuer: letsencrypt-staging
+      rateLimit:
+        enabled: true
     monitoring:
       serviceMonitor: {enabled: true}
       prometheusRule: {enabled: true}

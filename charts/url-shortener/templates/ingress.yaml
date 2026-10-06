@@ -1,0 +1,122 @@
+{{- if .Values.ingress.enabled }}
+{{- $name := include "shortener.fullname" . -}}
+{{- $ns := .Release.Namespace -}}
+{{- $ing := .Values.ingress -}}
+{{- $mw := list -}}
+{{- if $ing.tls.enabled }}{{ $mw = append $mw (printf "%s-%s-https@kubernetescrd" $ns $name) }}{{ end -}}
+{{- $site := $mw -}}
+{{- $create := $mw -}}
+{{- if $ing.rateLimit.enabled }}
+{{- $site = append $site (printf "%s-%s-ratelimit@kubernetescrd" $ns $name) -}}
+{{- $create = append $create (printf "%s-%s-ratelimit-create@kubernetescrd" $ns $name) -}}
+{{- end -}}
+{{- /* path, pathType, middlewares, requests a certificate */ -}}
+{{- $routes := list
+      (list "" "/" "Prefix" $site true)
+      (list "-api-links" "/api/links" "Exact" $create false)
+      (list "-metrics-deny" "/metrics" "Exact" (list (printf "%s-%s-deny@kubernetescrd" $ns $name)) false) -}}
+{{- range $routes }}
+{{- $suffix := index . 0 }}{{ $path := index . 1 }}{{ $type := index . 2 }}{{ $mws := index . 3 }}{{ $cert := index . 4 }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $name }}{{ $suffix }}
+  labels: {{- include "shortener.labels" $ | nindent 4 }}
+  {{- if or $mws (and $cert $ing.tls.enabled) }}
+  annotations:
+    {{- with $mws }}
+    traefik.ingress.kubernetes.io/router.middlewares: {{ join "," . }}
+    {{- end }}
+    {{- if and $cert $ing.tls.enabled }}
+    # One Certificate per secret: only this Ingress asks cert-manager for it.
+    cert-manager.io/cluster-issuer: {{ $ing.tls.clusterIssuer }}
+    {{- end }}
+  {{- end }}
+spec:
+  ingressClassName: {{ $ing.className }}
+  {{- if $ing.tls.enabled }}
+  tls:
+    - hosts: [{{ required "ingress.host is required for TLS" $ing.host | quote }}]
+      secretName: {{ $ing.tls.secretName }}
+  {{- end }}
+  rules:
+    - {{- with $ing.host }}
+      host: {{ . }}
+      {{- end }}
+      http:
+        paths:
+          - path: {{ $path }}
+            pathType: {{ $type }}
+            backend:
+              service: { name: {{ $name }}, port: { name: http } }
+{{- end }}
+---
+# /metrics is for Prometheus, which scrapes the Service directly. Through the
+# ingress (i.e. from the internet) it is denied: an allow-list that matches
+# no client makes Traefik answer 403.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ $name }}-deny
+  labels: {{- include "shortener.labels" . | nindent 4 }}
+spec:
+  ipAllowList:
+    sourceRange: ["255.255.255.255/32"]
+{{- if $ing.tls.enabled }}
+---
+# Plain-HTTP requests get a permanent redirect to HTTPS, HTTPS responses get
+# HSTS. (The ACME HTTP-01 challenge uses its own Ingress, so it is not redirected.)
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ $name }}-https
+  labels: {{- include "shortener.labels" . | nindent 4 }}
+spec:
+  chain:
+    middlewares:
+      - name: {{ $name }}-redirect
+      - name: {{ $name }}-hsts
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ $name }}-redirect
+  labels: {{- include "shortener.labels" . | nindent 4 }}
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ $name }}-hsts
+  labels: {{- include "shortener.labels" . | nindent 4 }}
+spec:
+  headers:
+    stsSeconds: {{ $ing.tls.hstsSeconds }}
+{{- end }}
+{{- if $ing.rateLimit.enabled }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ $name }}-ratelimit
+  labels: {{- include "shortener.labels" . | nindent 4 }}
+spec:
+  rateLimit:
+    average: {{ $ing.rateLimit.average }}
+    burst: {{ $ing.rateLimit.burst }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ $name }}-ratelimit-create
+  labels: {{- include "shortener.labels" . | nindent 4 }}
+spec:
+  rateLimit:
+    average: {{ $ing.rateLimit.createAverage }}
+    burst: {{ $ing.rateLimit.createBurst }}
+{{- end }}
+{{- end }}

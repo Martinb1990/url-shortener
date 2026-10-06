@@ -18,6 +18,19 @@ ingress:
   enabled: true
   className: traefik
   host: ""           # empty = match any host (reach it via the node IP / tunnel)
+  tls:
+    enabled: false   # needs a real host and cert-manager
+    clusterIssuer: letsencrypt-staging
+    secretName: url-shortener-tls
+    hstsSeconds: 31536000
+  # Per-client-IP limits (Traefik rateLimit). Needs the client IP preserved
+  # (Traefik service externalTrafficPolicy: Local), else all clients share one.
+  rateLimit:
+    enabled: false
+    average: 20      # requests/s, whole site
+    burst: 50
+    createAverage: 2 # /api/links (link creation)
+    createBurst: 10
 
 # Secret holding the Postgres password (key: postgres-password).
 # In the cluster it comes from a SOPS-encrypted manifest; for tests the chart
