@@ -54,6 +54,10 @@ resource "google_compute_instance" "devops01" {
   # Changing machine_type requires a stop/start; allow tofu to do it.
   allow_stopping_for_update = true
 
+  # Set explicitly to match the VM: leaving it unset (null) vs the API's
+  # "NONE" is treated as a change that forces replacement.
+  key_revocation_action_type = "NONE"
+
   tags = var.enable_web ? ["web"] : []
 
   boot_disk {
@@ -69,6 +73,14 @@ resource "google_compute_instance" "devops01" {
       nat_ip       = google_compute_address.devops01.address
       network_tier = "PREMIUM"
     }
+  }
+
+  # Matches the VM as created. Secure Boot needs a stop/start to enable;
+  # tracked as an accepted MEDIUM finding (see infra/README.md).
+  shielded_instance_config {
+    enable_secure_boot          = false
+    enable_vtpm                 = true
+    enable_integrity_monitoring = true
   }
 
   lifecycle {

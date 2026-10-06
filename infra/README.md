@@ -46,3 +46,4 @@ Run a single role with tags, e.g. `ansible-playbook site.yml -K --tags docker`.
 | Finding | Why accepted |
 |---|---|
 | Trivy GCP-0031: VM has a public IP | Single host reached over key-only SSH and serving HTTPS from phase 6. A bastion or NAT + load balancer would cost money. |
+| Trivy GCP-0067 (MEDIUM): Secure Boot off | The VM was created without it and enabling it needs a stop/start. Planned for a maintenance window: set `enable_secure_boot = true` and apply. |

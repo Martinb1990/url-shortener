@@ -14,6 +14,7 @@ infra/tofu/.terraform/
 *.tfstate
 *.tfstate.*
 *.tfplan
+infra/tofu/tfplan
 infra/tofu/terraform.tfvars
 infra/tofu/backend.hcl
 
