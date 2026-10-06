@@ -1,4 +1,5 @@
 {{- $name := include "shortener.fullname" . -}}
+{{- $runbook := "https://github.com/Martinb1990/url-shortener/blob/main/docs/runbook.md" -}}
 {{- $sel := printf "job=\"%s\", namespace=\"%s\"" $name .Release.Namespace -}}
 {{- if .Values.monitoring.serviceMonitor.enabled }}
 apiVersion: monitoring.coreos.com/v1
@@ -32,6 +33,7 @@ spec:
           for: 2m
           labels: { severity: critical }
           annotations:
+            runbook_url: {{ $runbook }}#shortenerdown
             summary: URL shortener has no healthy scrape targets
             description: Prometheus cannot scrape any app pod in {{ .Release.Namespace }} for 2 minutes.
         - alert: ShortenerHighErrorRate
@@ -41,6 +43,7 @@ spec:
           for: 5m
           labels: { severity: warning }
           annotations:
+            runbook_url: {{ $runbook }}#shortenerhigherrorrate
             summary: More than 5% of requests are failing
             description: '{{ "{{" }} $value | humanizePercentage {{ "}}" }} of requests returned 5xx over the last 5 minutes.'
         - alert: ShortenerHighLatency
@@ -50,6 +53,7 @@ spec:
           for: 10m
           labels: { severity: warning }
           annotations:
+            runbook_url: {{ $runbook }}#shortenerhighlatency
             summary: p95 latency above 500 ms
             description: 'p95 request latency is {{ "{{" }} $value | humanizeDuration {{ "}}" }}.'
         - alert: ShortenerDatabaseDown
@@ -57,6 +61,7 @@ spec:
           for: 2m
           labels: { severity: critical }
           annotations:
+            runbook_url: {{ $runbook }}#shortenerdatabasedown
             summary: PostgreSQL is not ready
             description: Link creation and uncached redirects are failing.
         - alert: ShortenerCacheDown
@@ -64,6 +69,7 @@ spec:
           for: 5m
           labels: { severity: warning }
           annotations:
+            runbook_url: {{ $runbook }}#shortenercachedown
             summary: Redis cache is down
             description: The app still works (falls back to PostgreSQL) but every redirect hits the database.
 {{- end }}

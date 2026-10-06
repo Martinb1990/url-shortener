@@ -29,6 +29,8 @@ env:
   K3D_SHA256: 06d8f25bc3a971c4eb29e0ff08429b180402db0f4dec838c9eac427e296800a0
   K3S_IMAGE: rancher/k3s:v1.36.5-k3s1
   PROMETHEUS_VERSION: 3.15.0
+  K6_IMAGE: grafana/k6:2.3.0
+  ZAP_IMAGE: zaproxy/zap-stable:2.17.0
   GITLEAKS_IMAGE: zricethezav/gitleaks:v8.30.1
 
 jobs:
@@ -307,7 +309,30 @@ jobs:
             --set image.repository=url-shortener --set image.tag=local --set image.pullPolicy=Never \
             --set dbSecret.create.enabled=true --set dbSecret.create.password="$(openssl rand -hex 16)"
           kubectl -n e2e get pods -o wide
-          ./scripts/smoke-test.sh http://localhost:8080
+          METRICS=blocked ./scripts/smoke-test.sh http://localhost:8080
+      - name: Load test (k6)
+        run: |
+          mkdir -p k6
+          docker run --rm --network host -v "$PWD/tests/load:/scripts:ro" -v "$PWD/k6:/out" \
+            "$K6_IMAGE" run --quiet -e BASE_URL=http://localhost:8080 \
+            --summary-export=/out/summary.json /scripts/shortener.js
+      - name: DAST (OWASP ZAP baseline)
+        # Passive scan of the running app through the ingress. Fails on any
+        # WARN/FAIL not overridden in .zap/rules.tsv.
+        run: |
+          mkdir -p zap && chmod 777 zap && cp .zap/rules.tsv zap/
+          docker run --rm --network host -v "$PWD/zap:/zap/wrk:rw" "$ZAP_IMAGE" \
+            zap-baseline.py -t http://localhost:8080 -c rules.tsv -r zap-report.html -J zap-report.json
+      - name: Upload load + DAST reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: load-and-dast-reports
+          path: |
+            k6/summary.json
+            zap/zap-report.html
+            zap/zap-report.json
+          if-no-files-found: ignore
       - name: Kubernetes diagnostics on failure
         if: failure()
         run: |

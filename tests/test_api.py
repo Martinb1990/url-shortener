@@ -135,3 +135,27 @@ def test_init_db_survives_concurrent_create_table_race(monkeypatch):
     monkeypatch.setattr(main.Base.metadata, "create_all", racing_create_all)
     main.init_db(attempts=3, delay=0)
     assert len(calls) == 2
+
+
+def test_security_headers_on_pages_and_api(client):
+    for path in ("/", "/api/links", "/static/app.js"):
+        res = client.get(path)
+        assert res.headers["X-Content-Type-Options"] == "nosniff"
+        assert res.headers["X-Frame-Options"] == "DENY"
+        assert "default-src 'self'" in res.headers["Content-Security-Policy"]
+        assert "frame-ancestors 'none'" in res.headers["Content-Security-Policy"]
+    assert client.get("/api/links").headers["Cache-Control"] == "no-store"
+
+
+def test_redirects_are_not_cacheable(client):
+    code = client.post("/api/links", json={"url": "https://example.com"}).json()["code"]
+    res = client.get("/" + code)
+    assert res.status_code == 307
+    assert res.headers["Cache-Control"] == "no-store"
+
+
+def test_docs_keep_working_without_strict_csp(client):
+    res = client.get("/docs")
+    assert res.status_code == 200
+    assert "Content-Security-Policy" not in res.headers
+    assert res.headers["X-Content-Type-Options"] == "nosniff"
