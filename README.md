@@ -10,7 +10,7 @@ A small URL shortener used to demonstrate a complete DevOps toolchain built only
 |---|---|---|---|
 | 1 | App + containers | FastAPI, PostgreSQL, Redis, Docker, Compose | ✅ |
 | 2 | CI + DevSecOps | GitHub Actions, Ruff, pytest, Trivy, gitleaks, Semgrep, GHCR, Dependabot, pre-commit | ✅ |
-| 3 | IaC + config management | OpenTofu, Ansible | ⏳ |
+| 3 | IaC + config management | OpenTofu (GCS state), Ansible | ✅ |
 | 4 | Kubernetes + GitOps CD | k3s, Helm, Flux CD, Sealed Secrets | ⏳ |
 | 5 | Observability | Prometheus, Grafana, Loki, Alertmanager | ⏳ |
 | 6 | Polish | Traefik + cert-manager (TLS), k6 load tests, OWASP ZAP, runbook | ⏳ |
@@ -41,7 +41,7 @@ browser ──► app (FastAPI :8000) ──► Redis   (cache: code → URL)
 ### Run with Docker (full stack)
 
 ```bash
-sudo ./scripts/bootstrap-host.sh   # one time: Docker + 4 GB swap
+make infra-venv && make ansible-apply   # one time: Docker, swap, SSH tunnel (see infra/README.md)
 make up                            # builds the image, starts app + Postgres + Redis
 open http://localhost:8000
 ```

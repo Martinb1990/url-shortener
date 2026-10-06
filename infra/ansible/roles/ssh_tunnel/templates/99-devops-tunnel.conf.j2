@@ -1,0 +1,7 @@
+# {{ ansible_managed }}
+# Narrow exception to server-baseline's "AllowTcpForwarding no":
+# {{ ssh_tunnel_user }} may open local tunnels to these localhost ports only.
+Match User {{ ssh_tunnel_user }}
+    AllowTcpForwarding local
+    PermitOpen {% for p in ssh_tunnel_ports %}localhost:{{ p }}{{ " " if not loop.last }}{% endfor %}
+

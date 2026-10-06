@@ -1,0 +1,10 @@
+- name: Allow SSH tunnels to the app ports
+  ansible.builtin.template:
+    src: 99-devops-tunnel.conf.j2
+    dest: /etc/ssh/sshd_config.d/99-devops-tunnel.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Validate sshd config
+    - Reload sshd
