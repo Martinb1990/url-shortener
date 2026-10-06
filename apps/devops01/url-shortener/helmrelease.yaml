@@ -27,4 +27,4 @@ spec:
   values:
     image:
       # Updated by Flux image automation; don't edit the marker comment.
-      tag: sha-2c7bd34 # {"$imagepolicy": "flux-system:url-shortener:tag"}
+      tag: main-20261006184015-4179bda # {"$imagepolicy": "flux-system:url-shortener:tag"}
