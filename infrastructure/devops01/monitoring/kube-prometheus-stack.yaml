@@ -56,9 +56,10 @@ spec:
         serviceMonitorSelectorNilUsesHelmValues: false
         podMonitorSelectorNilUsesHelmValues: false
         ruleSelectorNilUsesHelmValues: false
+        # ~400 MB at 1h of data; grows with series and retention (3d).
         resources:
-          requests: { cpu: 100m, memory: 300Mi }
-          limits: { memory: 800Mi }
+          requests: { cpu: 100m, memory: 512Mi }
+          limits: { memory: 1536Mi }
         storageSpec:
           volumeClaimTemplate:
             spec:
@@ -104,9 +105,11 @@ spec:
         passwordKey: admin-password
       # Dashboards and data sources are provisioned from git, so no PVC needed.
       persistence: { enabled: false }
+      # Grafana 13 uses ~250 MB right after start and ~400 MB with the stock
+      # dashboards loaded; a 256Mi limit got it OOM-killed in a loop.
       resources:
-        requests: { cpu: 50m, memory: 128Mi }
-        limits: { memory: 256Mi }
+        requests: { cpu: 50m, memory: 320Mi }
+        limits: { memory: 768Mi }
       ingress:
         enabled: true
         ingressClassName: traefik

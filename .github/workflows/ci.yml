@@ -274,8 +274,14 @@ jobs:
       - name: Compose logs on failure
         if: failure()
         run: docker compose logs --no-color
-      - name: Stop compose stack
-        run: docker compose down -v
+      - name: Stop compose stack and free runner disk
+        # The image under test (url-shortener:local) is kept; build cache and
+        # the Trivy DB are not needed past this point.
+        run: |
+          docker compose down -v
+          docker builder prune -af >/dev/null
+          docker volume rm -f trivy-cache >/dev/null
+          df -h /
 
       - name: Install k3d + helm
         run: |
@@ -285,8 +291,13 @@ jobs:
           curl -fsSL "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz" | tar xz --strip-components=1 -C /usr/local/bin linux-amd64/helm
       - name: E2E on Kubernetes (k3d, same k3s version as production)
         run: |
-          k3d cluster create e2e --image "$K3S_IMAGE" --agents 0 -p "8080:80@loadbalancer" --wait
+          # Image GC off: kubelet otherwise deletes the imported (not yet used)
+          # image when runner disk passes 85%, leaving pods in ErrImageNeverPull.
+          k3d cluster create e2e --image "$K3S_IMAGE" --agents 0 -p "8080:80@loadbalancer" --wait \
+            --k3s-arg "--kubelet-arg=image-gc-high-threshold=100@server:*" \
+            --k3s-arg "--kubelet-arg=image-gc-low-threshold=99@server:*"
           k3d image import url-shortener:local -c e2e
+          docker exec k3d-e2e-server-0 crictl images | grep url-shortener
           kubectl create namespace e2e
           kubectl label namespace e2e pod-security.kubernetes.io/enforce=restricted
           # Package the chart the way Flux does (version + git sha build metadata),
@@ -300,7 +311,11 @@ jobs:
       - name: Kubernetes diagnostics on failure
         if: failure()
         run: |
-          kubectl -n e2e get all,pvc,events --sort-by=.lastTimestamp || true
+          df -h / || true
+          docker exec k3d-e2e-server-0 crictl images || true
+          kubectl -n e2e get all,pvc -o wide || true
+          kubectl -n e2e get events --sort-by=.metadata.creationTimestamp || true
+          kubectl -n e2e describe pods || true
           kubectl -n e2e logs -l app.kubernetes.io/instance=e2e --all-containers --tail=50 || true
 
       - name: Log in to GHCR
