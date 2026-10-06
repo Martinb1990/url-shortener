@@ -22,9 +22,9 @@ variable "instance_name" {
 }
 
 variable "machine_type" {
-  description = "VM size. e2-medium = 2 vCPU / 4 GB."
+  description = "VM size. e2-standard-2 = 2 full (not shared-core) vCPU / 8 GB (e2-medium was too small for the monitoring stack)."
   type        = string
-  default     = "e2-medium"
+  default     = "e2-standard-2"
 }
 
 variable "static_ip" {
