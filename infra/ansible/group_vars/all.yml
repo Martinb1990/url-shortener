@@ -1,0 +1,19 @@
+# User who runs the stack and the SSH tunnel.
+devops_user: banemixalis
+
+swap_size_mb: 4096
+swap_swappiness: 10
+
+docker_log_max_size: 10m
+docker_log_max_file: "3"
+
+# Ports reachable through the SSH tunnel (app, Grafana from phase 5).
+ssh_tunnel_ports: [8000, 3000]
+
+common_packages:
+  - curl
+  - git
+  - jq
+  - make
+  - htop
+  - unzip

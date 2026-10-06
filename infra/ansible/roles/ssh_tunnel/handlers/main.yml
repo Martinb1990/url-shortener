@@ -1,0 +1,11 @@
+# Handlers run in this order: a broken config fails here and sshd is never
+# reloaded, so the running daemon (and your session) keep working.
+- name: Validate sshd config
+  ansible.builtin.command:
+    cmd: /usr/sbin/sshd -t
+  changed_when: false
+
+- name: Reload sshd
+  ansible.builtin.systemd_service:
+    name: ssh
+    state: reloaded

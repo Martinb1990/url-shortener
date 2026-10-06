@@ -7,3 +7,15 @@ __pycache__/
 htmlcov/
 *.db
 .env
+.venv-infra/
+
+# OpenTofu
+infra/tofu/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+infra/tofu/terraform.tfvars
+infra/tofu/backend.hcl
+
+# Ansible
+infra/ansible/collections/

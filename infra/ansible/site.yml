@@ -1,0 +1,15 @@
+# Configure gcp-devops01 from a bare (server-baseline hardened) Ubuntu host.
+#   ansible-playbook site.yml --check --diff -K   # dry run
+#   ansible-playbook site.yml -K                  # apply
+- name: Configure DevOps host
+  hosts: devops
+  become: true
+  roles:
+    - role: common
+      tags: [common]
+    - role: swap
+      tags: [swap]
+    - role: docker
+      tags: [docker]
+    - role: ssh_tunnel
+      tags: [ssh]

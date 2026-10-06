@@ -1,0 +1,4 @@
+# Copy to terraform.tfvars (git-ignored) and fill in.
+project_id = "your-gcp-project-id"
+static_ip  = "203.0.113.10" # the VM's current external IP
+# enable_web = true          # phase 6

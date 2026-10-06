@@ -3,7 +3,7 @@ VENV := .venv
 BIN := $(VENV)/bin
 
 help: ## Show available targets
-	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-10s %s\n", $$1, $$2}'
+	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-14s %s\n", $$1, $$2}'
 
 venv: ## Create virtualenv and install dev dependencies
 	python3 -m venv $(VENV)
@@ -37,4 +37,34 @@ down: ## Stop the Docker stack
 logs: ## Tail app logs
 	docker compose logs -f app
 
+# ----------------------------------------------------------- infrastructure
+INFRA_BIN := .venv-infra/bin
+TOFU := tofu -chdir=infra/tofu
+ANSIBLE := cd infra/ansible && ../../$(INFRA_BIN)
+
+infra-venv: ## Install Ansible tooling + collections
+	python3 -m venv .venv-infra
+	$(INFRA_BIN)/pip install -r infra/requirements.txt
+	$(ANSIBLE)/ansible-galaxy collection install -r requirements.yml -p collections
+
+tofu-init: ## Init OpenTofu with the GCS state backend
+	$(TOFU) init -backend-config=backend.hcl
+
+tofu-plan: ## Show infrastructure changes
+	$(TOFU) plan -out=tfplan
+
+tofu-apply: ## Apply the saved plan
+	$(TOFU) apply tfplan
+
+ansible-check: ## Dry-run host configuration (asks for sudo password)
+	$(ANSIBLE)/ansible-playbook site.yml --check --diff -K
+
+ansible-apply: ## Configure the host (asks for sudo password)
+	$(ANSIBLE)/ansible-playbook site.yml --diff -K
+
+infra-lint: ## Lint OpenTofu + Ansible
+	$(TOFU) fmt -check -recursive
+	$(ANSIBLE)/ansible-lint
+
+.PHONY: infra-venv tofu-init tofu-plan tofu-apply ansible-check ansible-apply infra-lint
 .PHONY: help venv run lock lint fmt test up down logs
