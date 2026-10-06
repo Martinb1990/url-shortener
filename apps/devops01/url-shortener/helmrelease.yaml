@@ -25,6 +25,10 @@ spec:
       retries: 3
       remediateLastFailure: true
   values:
+    monitoring:
+      serviceMonitor: { enabled: true }
+      prometheusRule: { enabled: true }
+      dashboard: { enabled: true }
     image:
       # Updated by Flux image automation; don't edit the marker comment.
       tag: main-20261006190752-ffe3136 # {"$imagepolicy": "flux-system:url-shortener:tag"}

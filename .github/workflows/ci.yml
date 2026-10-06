@@ -28,6 +28,7 @@ env:
   K3D_VERSION: v5.9.0
   K3D_SHA256: 06d8f25bc3a971c4eb29e0ff08429b180402db0f4dec838c9eac427e296800a0
   K3S_IMAGE: rancher/k3s:v1.36.5-k3s1
+  PROMETHEUS_VERSION: 3.15.0
   GITLEAKS_IMAGE: zricethezav/gitleaks:v8.30.1
 
 jobs:
@@ -114,21 +115,30 @@ jobs:
           curl -fsSL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" | tar xz -C /usr/local/bin kubeconform
       - name: helm lint
         run: helm lint charts/url-shortener --strict --set dbSecret.create.enabled=true --set dbSecret.create.password=ci
-      - name: Validate rendered chart
+      - name: Validate rendered chart (with monitoring resources)
         run: >
           helm template ci charts/url-shortener --set dbSecret.create.enabled=true --set dbSecret.create.password=ci
+          --set monitoring.serviceMonitor.enabled=true --set monitoring.prometheusRule.enabled=true
+          --set monitoring.dashboard.enabled=true
           | kubeconform -strict -summary -kubernetes-version 1.36.0
+          -schema-location default
+          -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+      - name: Alert rules (promtool check + unit tests)
+        run: |
+          curl -fsSL "https://github.com/prometheus/prometheus/releases/download/v${PROMETHEUS_VERSION}/prometheus-${PROMETHEUS_VERSION}.linux-amd64.tar.gz" \
+            | tar xz --strip-components=1 -C /usr/local/bin "prometheus-${PROMETHEUS_VERSION}.linux-amd64/promtool"
+          make test-alerts
       - name: Validate Flux manifests
         run: >
           kubeconform -strict -summary -kubernetes-version 1.36.0
           -ignore-filename-pattern kustomization.yaml -skip Secret,CustomResourceDefinition
           -schema-location default
           -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
-          clusters apps
+          clusters apps infrastructure
       - name: Secrets in apps/ must be SOPS-encrypted
         run: |
           bad=0
-          for f in $(grep -rl '^kind: Secret' apps clusters || true); do
+          for f in $(grep -rl '^kind: Secret' apps clusters infrastructure || true); do
             grep -q '^sops:' "$f" || { echo "::error file=$f::Secret is not SOPS-encrypted"; bad=1; }
           done
           exit $bad

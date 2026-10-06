@@ -65,6 +65,7 @@ kind: Service
 metadata:
   name: {{ $name }}
   labels: {{- include "shortener.labels" . | nindent 4 }}
+    app.kubernetes.io/name: app
 spec:
   selector: {{- include "shortener.selector" (list . "app") | nindent 4 }}
   ports:

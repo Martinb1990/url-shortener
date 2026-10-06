@@ -1,0 +1,69 @@
+# Loki in single-binary mode with filesystem storage: one pod, no object
+# store, no caches. Plenty for one node; 3 days of logs.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: loki
+  namespace: monitoring
+spec:
+  interval: 30m
+  timeout: 10m
+  chart:
+    spec:
+      chart: loki
+      version: 7.3.0
+      sourceRef:
+        kind: HelmRepository
+        name: grafana
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  values:
+    deploymentMode: SingleBinary
+    loki:
+      auth_enabled: false
+      commonConfig:
+        replication_factor: 1
+      storage:
+        type: filesystem
+      schemaConfig:
+        configs:
+          - from: "2024-04-01"
+            store: tsdb
+            object_store: filesystem
+            schema: v13
+            index:
+              prefix: index_
+              period: 24h
+      limits_config:
+        retention_period: 72h
+        ingestion_rate_mb: 4
+      compactor:
+        retention_enabled: true
+        delete_request_store: filesystem
+      pattern_ingester:
+        enabled: false
+    singleBinary:
+      replicas: 1
+      resources:
+        requests: { cpu: 50m, memory: 128Mi }
+        limits: { memory: 384Mi }
+      persistence:
+        size: 5Gi
+        storageClass: local-path
+    # Scalable-mode components off.
+    read: { replicas: 0 }
+    write: { replicas: 0 }
+    backend: { replicas: 0 }
+    # Extras that default on and would cost memory (the chunks cache alone
+    # requests several GB).
+    gateway: { enabled: false }
+    chunksCache: { enabled: false }
+    resultsCache: { enabled: false }
+    lokiCanary: { enabled: false }
+    test: { enabled: false }
+    minio: { enabled: false }

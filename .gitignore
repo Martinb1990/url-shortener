@@ -20,3 +20,6 @@ infra/tofu/backend.hcl
 
 # Ansible
 infra/ansible/collections/
+
+# Rendered by `make test-alerts`
+tests/monitoring/rules.yaml

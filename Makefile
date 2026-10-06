@@ -27,6 +27,14 @@ fmt: ## Auto-format code
 test: ## Run tests with coverage
 	$(BIN)/pytest --cov=app --cov-report=term-missing --cov-fail-under=80
 
+test-alerts: ## Unit-test the Prometheus alert rules (needs helm + promtool)
+	helm template url-shortener charts/url-shortener -n url-shortener \
+	  --set monitoring.prometheusRule.enabled=true --show-only templates/monitoring.yaml \
+	  | python3 -c 'import json,sys,yaml; print(json.dumps({"groups": yaml.safe_load(sys.stdin)["spec"]["groups"]}))' \
+	  > tests/monitoring/rules.yaml
+	promtool check rules tests/monitoring/rules.yaml
+	promtool test rules tests/monitoring/alerts_test.yaml
+
 up: ## Build and start the Docker stack
 	@test -f .env || cp .env.example .env
 	docker compose up -d --build
@@ -67,4 +75,4 @@ infra-lint: ## Lint OpenTofu + Ansible
 	$(ANSIBLE)/ansible-lint
 
 .PHONY: infra-venv tofu-init tofu-plan tofu-apply ansible-check ansible-apply infra-lint
-.PHONY: help venv run lock lint fmt test up down logs
+.PHONY: help venv run lock lint test-alerts fmt test up down logs

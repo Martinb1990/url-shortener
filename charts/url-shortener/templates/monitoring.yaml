@@ -1,0 +1,81 @@
+{{- $name := include "shortener.fullname" . -}}
+{{- $sel := printf "job=\"%s\", namespace=\"%s\"" $name .Release.Namespace -}}
+{{- if .Values.monitoring.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ $name }}
+  labels: {{- include "shortener.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: app
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: {{ .Values.monitoring.serviceMonitor.interval }}
+{{- end }}
+{{- if .Values.monitoring.prometheusRule.enabled }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ $name }}
+  labels: {{- include "shortener.labels" . | nindent 4 }}
+spec:
+  groups:
+    - name: url-shortener
+      rules:
+        - alert: ShortenerDown
+          expr: sum(up{ {{- $sel -}} }) == 0 or absent(up{ {{- $sel -}} })
+          for: 2m
+          labels: { severity: critical }
+          annotations:
+            summary: URL shortener has no healthy scrape targets
+            description: Prometheus cannot scrape any app pod in {{ .Release.Namespace }} for 2 minutes.
+        - alert: ShortenerHighErrorRate
+          expr: |
+            sum(rate(http_requests_total{ {{- $sel -}}, status="5xx"}[5m]))
+              / sum(rate(http_requests_total{ {{- $sel -}} }[5m])) > 0.05
+          for: 5m
+          labels: { severity: warning }
+          annotations:
+            summary: More than 5% of requests are failing
+            description: '{{ "{{" }} $value | humanizePercentage {{ "}}" }} of requests returned 5xx over the last 5 minutes.'
+        - alert: ShortenerHighLatency
+          expr: |
+            histogram_quantile(0.95,
+              sum by (le) (rate(http_request_duration_highr_seconds_bucket{ {{- $sel -}} }[5m]))) > 0.5
+          for: 10m
+          labels: { severity: warning }
+          annotations:
+            summary: p95 latency above 500 ms
+            description: 'p95 request latency is {{ "{{" }} $value | humanizeDuration {{ "}}" }}.'
+        - alert: ShortenerDatabaseDown
+          expr: kube_statefulset_status_replicas_ready{namespace="{{ .Release.Namespace }}", statefulset="{{ $name }}-postgres"} < 1
+          for: 2m
+          labels: { severity: critical }
+          annotations:
+            summary: PostgreSQL is not ready
+            description: Link creation and uncached redirects are failing.
+        - alert: ShortenerCacheDown
+          expr: kube_deployment_status_replicas_available{namespace="{{ .Release.Namespace }}", deployment="{{ $name }}-redis"} < 1
+          for: 5m
+          labels: { severity: warning }
+          annotations:
+            summary: Redis cache is down
+            description: The app still works (falls back to PostgreSQL) but every redirect hits the database.
+{{- end }}
+{{- if .Values.monitoring.dashboard.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}-dashboard
+  labels: {{- include "shortener.labels" . | nindent 4 }}
+    grafana_dashboard: "1"
+data:
+  url-shortener.json: |-
+{{ .Files.Get "dashboards/url-shortener.json" | replace "__JOB__" $name | replace "__NAMESPACE__" .Release.Namespace | indent 4 }}
+{{- end }}
