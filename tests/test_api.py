@@ -117,3 +117,21 @@ def test_init_db_gives_up_after_max_attempts(monkeypatch):
     monkeypatch.setattr(main.Base.metadata, "create_all", always_down)
     with pytest.raises(OperationalError):
         main.init_db(attempts=2, delay=0)
+
+
+def test_init_db_survives_concurrent_create_table_race(monkeypatch):
+    from sqlalchemy.exc import IntegrityError
+
+    from app import main
+
+    calls = []
+
+    def racing_create_all(_engine):
+        calls.append(1)
+        if len(calls) == 1:
+            # What Postgres raises when another replica created the table first.
+            raise IntegrityError("CREATE TABLE links", {}, Exception("pg_type_typname_nsp_index"))
+
+    monkeypatch.setattr(main.Base.metadata, "create_all", racing_create_all)
+    main.init_db(attempts=3, delay=0)
+    assert len(calls) == 2

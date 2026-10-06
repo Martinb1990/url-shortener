@@ -6,7 +6,8 @@
 app.kubernetes.io/part-of: url-shortener
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 app.kubernetes.io/instance: {{ .Release.Name }}
-helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version }}
+{{- /* Flux appends build metadata to the version (0.1.0+<git sha>); "+" is invalid in labels. */}}
+helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end -}}
 
 {{/* Selector labels for a component: include "shortener.selector" (list . "app") */}}

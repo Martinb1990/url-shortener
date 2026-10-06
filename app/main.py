@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from prometheus_client import Counter
 from prometheus_fastapi_instrumentator import Instrumentator
 from sqlalchemy import select, text, update
-from sqlalchemy.exc import IntegrityError, OperationalError
+from sqlalchemy.exc import IntegrityError, OperationalError, ProgrammingError
 from sqlalchemy.orm import Session
 
 from app import __version__, cache
@@ -34,15 +34,18 @@ REDIRECTS = Counter("shortener_redirects_total", "Redirect lookups", ["result", 
 def init_db(attempts: int = 30, delay: float = 2.0) -> None:
     """Create tables, waiting for the database to accept connections.
 
-    In Kubernetes the app often starts before Postgres is ready; retrying here
-    avoids crash-looping on every deploy.
+    Retries cover two startup races in Kubernetes:
+    - the app starts before Postgres accepts connections (OperationalError);
+    - replicas starting together both run CREATE TABLE and the loser hits a
+      duplicate-type/relation error (IntegrityError/ProgrammingError). On the
+      next attempt the table exists and create_all skips it.
     """
     # Schema management stays simple for now; Alembic migrations can replace this later.
     for attempt in range(1, attempts + 1):
         try:
             Base.metadata.create_all(engine)
             return
-        except OperationalError as exc:
+        except (OperationalError, IntegrityError, ProgrammingError) as exc:
             if attempt == attempts:
                 raise
             log.warning("database not ready (attempt %d/%d): %s", attempt, attempts, exc.orig)
