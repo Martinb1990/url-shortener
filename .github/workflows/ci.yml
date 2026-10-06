@@ -279,7 +279,10 @@ jobs:
           k3d image import url-shortener:local -c e2e
           kubectl create namespace e2e
           kubectl label namespace e2e pod-security.kubernetes.io/enforce=restricted
-          helm install e2e charts/url-shortener -n e2e --wait --timeout 4m \
+          # Package the chart the way Flux does (version + git sha build metadata),
+          # so the real API server validates what production will receive.
+          helm package charts/url-shortener --version "0.1.0+${GITHUB_SHA::12}" -d /tmp/chart
+          helm install e2e /tmp/chart/url-shortener-*.tgz -n e2e --wait --timeout 4m \
             --set image.repository=url-shortener --set image.tag=local --set image.pullPolicy=Never \
             --set dbSecret.create.enabled=true --set dbSecret.create.password="$(openssl rand -hex 16)"
           kubectl -n e2e get pods -o wide
