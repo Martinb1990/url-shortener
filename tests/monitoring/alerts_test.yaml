@@ -1,0 +1,74 @@
+# Unit tests for the app's alert rules (promtool test rules).
+# rules.yaml is rendered from the Helm chart by `make test-alerts` / CI.
+rule_files: [rules.yaml]
+evaluation_interval: 1m
+
+tests:
+  # Half of all requests fail: error-rate alert fires, the app is still "up".
+  - interval: 1m
+    input_series:
+      - series: 'http_requests_total{job="url-shortener",namespace="url-shortener",handler="/{code}",method="GET",status="5xx"}'
+        values: '0+60x20'
+      - series: 'http_requests_total{job="url-shortener",namespace="url-shortener",handler="/",method="GET",status="2xx"}'
+        values: '0+60x20'
+      - series: 'up{job="url-shortener",namespace="url-shortener",pod="app-1"}'
+        values: '1x20'
+    alert_rule_test:
+      - eval_time: 4m       # condition true, but "for: 5m" not yet reached
+        alertname: ShortenerHighErrorRate
+        exp_alerts: []
+      - eval_time: 15m
+        alertname: ShortenerHighErrorRate
+        exp_alerts:
+          - exp_labels: { severity: warning }
+            exp_annotations:
+              summary: More than 5% of requests are failing
+              description: 50% of requests returned 5xx over the last 5 minutes.
+      - eval_time: 15m
+        alertname: ShortenerDown
+        exp_alerts: []
+
+  # Healthy traffic: nothing fires.
+  - interval: 1m
+    input_series:
+      - series: 'http_requests_total{job="url-shortener",namespace="url-shortener",handler="/",method="GET",status="2xx"}'
+        values: '0+60x20'
+      - series: 'up{job="url-shortener",namespace="url-shortener",pod="app-1"}'
+        values: '1x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: ShortenerHighErrorRate
+        exp_alerts: []
+      - eval_time: 15m
+        alertname: ShortenerDown
+        exp_alerts: []
+
+  # Every app pod fails its scrape: ShortenerDown after 2 minutes.
+  - interval: 1m
+    input_series:
+      - series: 'up{job="url-shortener",namespace="url-shortener",pod="app-1"}'
+        values: '0x10'
+      - series: 'up{job="url-shortener",namespace="url-shortener",pod="app-2"}'
+        values: '0x10'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: ShortenerDown
+        exp_alerts:
+          - exp_labels: { severity: critical }
+            exp_annotations:
+              summary: URL shortener has no healthy scrape targets
+              description: Prometheus cannot scrape any app pod in url-shortener for 2 minutes.
+
+  # Postgres not ready.
+  - interval: 1m
+    input_series:
+      - series: 'kube_statefulset_status_replicas_ready{namespace="url-shortener",statefulset="url-shortener-postgres"}'
+        values: '0x10'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: ShortenerDatabaseDown
+        exp_alerts:
+          - exp_labels: { severity: critical, namespace: url-shortener, statefulset: url-shortener-postgres }
+            exp_annotations:
+              summary: PostgreSQL is not ready
+              description: Link creation and uncached redirects are failing.

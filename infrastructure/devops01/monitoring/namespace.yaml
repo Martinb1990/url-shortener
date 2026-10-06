@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    # node-exporter needs the host network, PID namespace and filesystem,
+    # which only the "privileged" Pod Security level allows. Everything
+    # else here is still reported against "restricted".
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted

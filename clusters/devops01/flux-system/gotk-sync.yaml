@@ -17,6 +17,7 @@ spec:
     /*
     !/clusters/
     !/apps/
+    !/infrastructure/
     !/charts/
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1

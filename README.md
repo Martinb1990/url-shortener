@@ -12,7 +12,7 @@ A small URL shortener used to demonstrate a complete DevOps toolchain built only
 | 2 | CI + DevSecOps | GitHub Actions, Ruff, pytest, Trivy, gitleaks, Semgrep, GHCR, Dependabot, pre-commit | ✅ |
 | 3 | IaC + config management | OpenTofu (GCS state), Ansible | ✅ |
 | 4 | Kubernetes + GitOps CD | k3s, Helm, Flux CD (+ image automation), SOPS + age | ✅ |
-| 5 | Observability | Prometheus, Grafana, Loki, Alertmanager | ⏳ |
+| 5 | Observability | Prometheus, Grafana, Loki, Alloy, Alertmanager, promtool alert tests | ✅ |
 | 6 | Polish | Traefik + cert-manager (TLS), k6 load tests, OWASP ZAP, runbook | ⏳ |
 
 ## Architecture

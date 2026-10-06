@@ -28,6 +28,18 @@ dbSecret:
     enabled: false
     password: ""
 
+# -- Monitoring (needs the Prometheus Operator CRDs; off by default so the
+#    chart installs on a bare cluster, e.g. the CI e2e test) ---------------
+monitoring:
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+  prometheusRule:
+    enabled: false
+  # Grafana dashboard as a ConfigMap, picked up by the Grafana sidecar.
+  dashboard:
+    enabled: false
+
 # -- PostgreSQL -------------------------------------------------------------
 postgres:
   image: postgres:18-alpine
