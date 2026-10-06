@@ -1,0 +1,61 @@
+# Headlamp: web console for the cluster (Kubernetes SIG UI). Private like
+# Grafana: k3s servicelb serves it on node port 4466, which the GCP
+# firewall keeps closed; reach it through the SSH tunnel
+# (-L 4466:localhost:4466) at http://localhost:4466 and log in with a
+# token for the headlamp-admin ServiceAccount (see docs/operations.md).
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: headlamp
+  namespace: headlamp
+spec:
+  interval: 12h
+  url: https://kubernetes-sigs.github.io/headlamp/
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: headlamp
+  namespace: headlamp
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: headlamp
+      version: 0.45.0
+      sourceRef:
+        kind: HelmRepository
+        name: headlamp
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  values:
+    # Headlamp's own ServiceAccount gets no cluster rights: every action
+    # uses the token the person logs in with. (The chart default would bind
+    # it to cluster-admin, so anyone reaching the page could act as admin.)
+    clusterRoleBinding:
+      create: false
+    service:
+      type: LoadBalancer
+      port: 4466
+    podSecurityContext:
+      runAsNonRoot: true
+      fsGroup: 101
+      seccompProfile:
+        type: RuntimeDefault
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 100
+      runAsGroup: 101
+      privileged: false
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop: ["ALL"]
+    resources:
+      requests: { cpu: 10m, memory: 48Mi }
+      limits: { memory: 192Mi }
