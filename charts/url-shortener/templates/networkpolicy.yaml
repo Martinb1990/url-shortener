@@ -1,0 +1,46 @@
+{{- $release := .Release.Name -}}
+# Default deny inbound for every pod in this release, then open only what's needed:
+#   ingress controller -> app :8000,  app -> postgres :5432,  app -> redis :6379
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $release }}-default-deny
+  labels: {{- include "shortener.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/instance: {{ $release }} }
+  policyTypes: [Ingress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $release }}-app
+  labels: {{- include "shortener.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels: {{- include "shortener.selector" (list . "app") | nindent 6 }}
+  policyTypes: [Ingress]
+  ingress:
+    # From anywhere in the cluster (ingress controller, Prometheus in phase 5).
+    - from:
+        - namespaceSelector: {}
+      ports:
+        - { port: 8000, protocol: TCP }
+{{- range $component, $port := dict "postgres" 5432 "redis" 6379 }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $release }}-{{ $component }}
+  labels: {{- include "shortener.labels" $ | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels: {{- include "shortener.selector" (list $ $component) | nindent 6 }}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: {{- include "shortener.selector" (list $ "app") | nindent 14 }}
+      ports:
+        - { port: {{ $port }}, protocol: TCP }
+{{- end }}

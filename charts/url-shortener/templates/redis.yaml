@@ -1,0 +1,50 @@
+{{- $name := printf "%s-redis" (include "shortener.fullname" .) -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels: {{- include "shortener.labels" . | nindent 4 }}
+    app.kubernetes.io/name: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {{- include "shortener.selector" (list . "redis") | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "shortener.selector" (list . "redis") | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "shortener.fullname" . }}
+      automountServiceAccountToken: false
+      securityContext:
+        runAsUser: 999    # "redis" user in the alpine image
+        runAsGroup: 999
+        fsGroup: 999
+      containers:
+        - name: redis
+          image: {{ .Values.redis.image }}
+          # Pure cache: no persistence, evict least-recently-used keys when full.
+          args: ["--maxmemory", {{ .Values.redis.maxmemory | quote }}, "--maxmemory-policy", "allkeys-lru", "--save", "", "--appendonly", "no"]
+          ports:
+            - { name: redis, containerPort: 6379 }
+          readinessProbe:
+            exec: { command: ["redis-cli", "ping"] }
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket: { port: redis }
+            periodSeconds: 15
+          resources: {{- toYaml .Values.redis.resources | nindent 12 }}
+          securityContext: {{- include "shortener.containerSecurity" . | nindent 12 }}
+          volumeMounts:
+            - { name: data, mountPath: /data }
+      volumes:
+        - { name: data, emptyDir: {} }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels: {{- include "shortener.labels" . | nindent 4 }}
+spec:
+  selector: {{- include "shortener.selector" (list . "redis") | nindent 4 }}
+  ports:
+    - { name: redis, port: 6379, targetPort: redis }

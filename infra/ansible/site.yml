@@ -13,3 +13,7 @@
       tags: [docker]
     - role: ssh_tunnel
       tags: [ssh]
+    - role: k3s
+      tags: [k3s]
+    - role: cluster_tools
+      tags: [k3s, tools]

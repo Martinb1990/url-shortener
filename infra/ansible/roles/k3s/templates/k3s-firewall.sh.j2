@@ -1,0 +1,9 @@
+#!/bin/sh
+# {{ ansible_managed }}
+# server-baseline closes the INPUT policy. Pods and service IPs must still
+# reach the node (API server, DNS, kubelet), so allow the cluster CIDRs.
+# Runs before every k3s start; idempotent.
+set -eu
+for cidr in {{ k3s_pod_cidr }} {{ k3s_service_cidr }}; do
+  iptables -C INPUT -s "$cidr" -j ACCEPT 2>/dev/null || iptables -I INPUT 1 -s "$cidr" -j ACCEPT
+done

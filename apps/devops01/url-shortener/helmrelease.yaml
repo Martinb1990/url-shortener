@@ -1,0 +1,30 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: url-shortener
+  namespace: url-shortener
+spec:
+  interval: 10m
+  releaseName: url-shortener
+  chart:
+    spec:
+      chart: ./charts/url-shortener
+      # Rebuild the chart on every git revision (the chart version isn't bumped per change).
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: flux-system
+        namespace: flux-system
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    # A failed upgrade (pods never become ready) is rolled back automatically.
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+      remediateLastFailure: true
+  values:
+    image:
+      # Updated by Flux image automation; don't edit the marker comment.
+      tag: sha-2c7bd34 # {"$imagepolicy": "flux-system:url-shortener:tag"}
