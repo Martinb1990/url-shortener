@@ -4,7 +4,7 @@ Two layers, two tools:
 
 | Layer | Tool | Manages |
 |---|---|---|
-| Cloud resources | **OpenTofu** (`infra/tofu`) | The VM, its static IP, firewall rules |
+| Cloud resources | **OpenTofu** (`infra/tofu`) | The VM, its static IP, all firewall rules |
 | Inside the VM | **Ansible** (`infra/ansible`) | Packages, swap, Docker, SSH tunnel exception |
 
 OS hardening (SSH, firewall, auditd, sysctls) stays with
@@ -47,3 +47,9 @@ Run a single role with tags, e.g. `ansible-playbook site.yml -K --tags docker`.
 |---|---|
 | Trivy GCP-0031: VM has a public IP | Single host reached over key-only SSH and serving HTTPS from phase 6. A bastion or NAT + load balancer would cost money. |
 | Trivy GCP-0067 (MEDIUM): Secure Boot off | The VM was created without it and enabling it needs a stop/start. Planned for a maintenance window: set `enable_secure_boot = true` and apply. |
+| Trivy GCP-0027 (CRITICAL): SSH from 0.0.0.0/0 | Key-only, server-baseline hardened. **Stronger option:** limit `default-allow-ssh` source ranges in `infra/tofu/firewall.tf` (your IP, or IAP `35.235.240.0/20` + `gcloud compute ssh --tunnel-through-iap`). Check you have another way in before applying. |
+| Trivy GCP-0027 (CRITICAL): ICMP from 0.0.0.0/0 | Ping / path-MTU discovery only. |
+
+## Firewall rules
+
+All rules on the `default` network are in OpenTofu (`firewall.tf`, `main.tf`). GCP's `default-allow-rdp` (tcp:3389 from anywhere) was deleted through it.

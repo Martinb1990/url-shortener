@@ -16,11 +16,12 @@ import {
   id = "projects/${var.project_id}/global/firewalls/default-allow-internal"
 }
 
-import {
-  to = google_compute_firewall.default_allow_rdp
-  id = "projects/${var.project_id}/global/firewalls/default-allow-rdp"
-}
-
+# Accepted risk (Trivy GCP-0027): SSH is reachable from any IP. Logins are
+# key-only and server-baseline hardened (fail2ban-style brute-force
+# protection, MaxAuthTries). Restricting the source (home IP, or IAP's
+# 35.235.240.0/20 with `gcloud compute ssh --tunnel-through-iap`) is the
+# stronger option; see infra/README.md.
+#trivy:ignore:GCP-0027
 resource "google_compute_firewall" "default_allow_ssh" {
   name          = "default-allow-ssh"
   network       = "default"
@@ -35,6 +36,9 @@ resource "google_compute_firewall" "default_allow_ssh" {
   }
 }
 
+# Accepted risk (Trivy GCP-0027): ICMP from anywhere (ping, path-MTU
+# discovery); no data exposure.
+#trivy:ignore:GCP-0027
 resource "google_compute_firewall" "default_allow_icmp" {
   name          = "default-allow-icmp"
   network       = "default"
@@ -69,16 +73,5 @@ resource "google_compute_firewall" "default_allow_internal" {
   }
 }
 
-resource "google_compute_firewall" "default_allow_rdp" {
-  name          = "default-allow-rdp"
-  network       = "default"
-  description   = "Allow RDP from anywhere"
-  direction     = "INGRESS"
-  priority      = 65534
-  source_ranges = ["0.0.0.0/0"]
-
-  allow {
-    protocol = "tcp"
-    ports    = ["3389"]
-  }
-}
+# default-allow-rdp (tcp:3389 from 0.0.0.0/0) was deleted through this file:
+# it opened Windows Remote Desktop to the internet on a Linux VM.
