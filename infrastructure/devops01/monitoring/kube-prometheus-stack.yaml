@@ -73,6 +73,9 @@ spec:
         resources:
           requests: { cpu: 10m, memory: 32Mi }
           limits: { memory: 96Mi }
+        # Mounted at /etc/alertmanager/secrets/<name>/; the webhook URL stays
+        # out of the Alertmanager config (and out of git, via SOPS).
+        secrets: [alertmanager-discord]
       config:
         route:
           group_by: ["alertname", "namespace"]
@@ -81,11 +84,18 @@ spec:
           repeat_interval: 4h
           receiver: "null"
           routes:
-            # Watchdog fires constantly to prove the alert pipeline works.
-            - matchers: ['alertname = "Watchdog"']
+            # Watchdog fires constantly to prove the alert pipeline works;
+            # InfoInhibitor only exists to mute "info" alerts.
+            - matchers: ['alertname =~ "Watchdog|InfoInhibitor"']
               receiver: "null"
+            - matchers: ['severity =~ "warning|critical"']
+              receiver: discord
         receivers:
           - name: "null"
+          - name: discord
+            discord_configs:
+              - webhook_url_file: /etc/alertmanager/secrets/alertmanager-discord/webhook-url
+                send_resolved: true
 
     grafana:
       admin:
