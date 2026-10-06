@@ -301,8 +301,10 @@ jobs:
           k3d image import url-shortener:local -c e2e
           # k3s installs Traefik (and its CRDs) asynchronously after the cluster
           # reports ready; the chart contains Traefik Middlewares, so wait for them.
-          timeout 180 bash -c 'until kubectl get crd middlewares.traefik.io >/dev/null 2>&1; do sleep 2; done'
-          kubectl wait --for=condition=Established crd/middlewares.traefik.io --timeout=60s
+          # Poll the condition itself: `kubectl wait` errors out (instead of
+          # waiting) while the new CRD has no status.conditions yet.
+          timeout 180 bash -c 'until [ "$(kubectl get crd middlewares.traefik.io -o jsonpath="{.status.conditions[?(@.type==\"Established\")].status}" 2>/dev/null)" = True ]; do sleep 2; done'
+          echo "middlewares.traefik.io established"
           docker exec k3d-e2e-server-0 crictl images | grep url-shortener
           kubectl create namespace e2e
           kubectl label namespace e2e pod-security.kubernetes.io/enforce=restricted
