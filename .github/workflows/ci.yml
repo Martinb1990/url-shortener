@@ -32,7 +32,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install ruff (version pinned in requirements-dev.txt)
-        run: pip install "$(grep '^ruff==' requirements-dev.txt)"
+        run: pip install "$(grep -oE '^ruff==[^ ]+' requirements-dev.txt)"
       - run: ruff check --output-format=github .
       - run: ruff format --check .
 

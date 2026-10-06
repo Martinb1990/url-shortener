@@ -16,6 +16,18 @@ make venv                                   # once
 make lint test
 ```
 
+## Dependencies
+
+Direct dependencies live in `requirements.in` / `requirements-dev.in`. The `.txt` files are generated lockfiles: every package, including indirect ones, is pinned with SHA-256 hashes. Don't edit the `.txt` files by hand:
+
+```bash
+# edit requirements.in, then:
+make lock
+make test
+```
+
+Pinning indirect dependencies matters: Trivy can only flag a vulnerable package it can see in the lockfile.
+
 ## CI pipeline
 
 | Stage | Tool | Fails the build on |
