@@ -91,6 +91,7 @@
     owner: root
     group: root
     mode: "0644"
+    # ansible_managed only exists in templates, so the header is literal here.
     content: |
-      # {{ ansible_managed }}
+      # Managed by Ansible (k3s role). Local changes will be overwritten.
       export KUBECONFIG="$HOME/.kube/config"
