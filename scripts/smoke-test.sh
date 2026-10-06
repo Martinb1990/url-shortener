@@ -34,9 +34,13 @@ clicks=$(curl -fsS "$BASE/api/links/$code" | python3 -c 'import json,sys; print(
 [[ $clicks == 2 ]] || fail "expected 2 clicks, got $clicks"
 
 echo "==> Metrics exposed"
-curl -fsS "$BASE/metrics" | grep -q '^shortener_links_created_total' || fail "metric missing"
+# Capture first: with pipefail, `curl | grep -q` fails at random when grep
+# exits on the first match and curl gets SIGPIPE writing the rest.
+metrics=$(curl -fsS "$BASE/metrics") || fail "metrics endpoint failed"
+grep -q '^shortener_links_created_total' <<<"$metrics" || fail "metric missing"
 
 echo "==> Frontend served"
-curl -fsS "$BASE/" | grep -q 'Shortly' || fail "index page missing"
+index=$(curl -fsS "$BASE/") || fail "index page failed"
+grep -q 'Shortly' <<<"$index" || fail "index page missing"
 
 echo "All smoke tests passed."
