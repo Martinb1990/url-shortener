@@ -1,5 +1,7 @@
 # Shortly: URL Shortener (a DevOps showcase project)
 
+[![CI](https://github.com/Martinb1990/url-shortener/actions/workflows/ci.yml/badge.svg)](https://github.com/Martinb1990/url-shortener/actions/workflows/ci.yml)
+
 A small URL shortener used to demonstrate a complete DevOps toolchain built only from free, open-source tools, running on a single VM (`gcp-devops01`).
 
 ## Roadmap
@@ -7,7 +9,7 @@ A small URL shortener used to demonstrate a complete DevOps toolchain built only
 | Phase | Scope | Tools | Status |
 |---|---|---|---|
 | 1 | App + containers | FastAPI, PostgreSQL, Redis, Docker, Compose | ✅ |
-| 2 | CI + DevSecOps | GitHub Actions, Ruff, pytest, Trivy, gitleaks, Semgrep, GHCR | ⏳ |
+| 2 | CI + DevSecOps | GitHub Actions, Ruff, pytest, Trivy, gitleaks, Semgrep, GHCR, Dependabot, pre-commit | ✅ |
 | 3 | IaC + config management | OpenTofu, Ansible | ⏳ |
 | 4 | Kubernetes + GitOps CD | k3s, Helm, Flux CD, Sealed Secrets | ⏳ |
 | 5 | Observability | Prometheus, Grafana, Loki, Alertmanager | ⏳ |
@@ -51,6 +53,14 @@ make venv   # virtualenv + dev dependencies
 make test   # pytest + coverage
 make lint   # ruff
 make run    # http://127.0.0.1:8000, uses SQLite, no Redis
+```
+
+## CI/CD
+
+Every push and pull request runs lint, tests, secret scanning, static analysis and dependency/Dockerfile scanning in parallel. The image is then built, scanned, smoke-tested against the full compose stack and, on `main` only, published to `ghcr.io/martinb1990/url-shortener` with an SBOM and provenance. See [CONTRIBUTING.md](CONTRIBUTING.md) for the stage-by-stage breakdown.
+
+```bash
+docker pull ghcr.io/martinb1990/url-shortener:latest
 ```
 
 ## Configuration

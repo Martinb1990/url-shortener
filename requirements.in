@@ -1,0 +1,8 @@
+# Direct runtime dependencies. Edit this file, then run `make lock`.
+fastapi~=0.142
+uvicorn[standard]~=0.54
+sqlalchemy~=2.1
+psycopg[binary]~=3.3
+redis~=8.1
+prometheus-client~=0.26
+prometheus-fastapi-instrumentator~=8.1

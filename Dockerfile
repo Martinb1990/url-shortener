@@ -8,7 +8,10 @@ RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+# Fully pinned + hashed lockfile: a tampered or unexpected package fails the build.
+# pip itself isn't needed at runtime, so drop it from the venv afterwards.
+RUN pip install --require-hashes -r requirements.txt \
+ && pip uninstall -y pip
 
 # ---- runtime stage: slim image, non-root user, only what's needed ----
 FROM python:3.13-slim AS runtime
@@ -21,7 +24,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/opt/venv/bin:$PATH"
 
-RUN groupadd --system --gid 10001 app \
+# Remove the base image's pip (and its vendored urllib3/msgpack/pkg_resources):
+# unused at runtime, and a recurring source of CVEs and attack surface.
+RUN rm -rf /usr/local/bin/pip* \
+           /usr/local/lib/python3.13/site-packages/pip \
+           /usr/local/lib/python3.13/site-packages/pip-*.dist-info \
+           /usr/local/lib/python3.13/ensurepip \
+ && groupadd --system --gid 10001 app \
  && useradd --system --uid 10001 --gid app --no-create-home app
 
 WORKDIR /srv
