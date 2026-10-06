@@ -26,9 +26,9 @@ spec:
       remediateLastFailure: true
   values:
     monitoring:
-      serviceMonitor: { enabled: true }
-      prometheusRule: { enabled: true }
-      dashboard: { enabled: true }
+      serviceMonitor: {enabled: true}
+      prometheusRule: {enabled: true}
+      dashboard: {enabled: true}
     image:
       # Updated by Flux image automation; don't edit the marker comment.
-      tag: main-20261006192841-eb49049 # {"$imagepolicy": "flux-system:url-shortener:tag"}
+      tag: main-20261006193856-225706f # {"$imagepolicy": "flux-system:url-shortener:tag"}
