@@ -6,6 +6,10 @@ image:
 
 replicaCount: 2
 
+# Seconds a terminating pod keeps serving (preStop) before it is stopped,
+# so in-flight routing can drain during rolling updates.
+shutdownDelaySeconds: 5
+
 resources:
   requests: { cpu: 50m, memory: 96Mi }
   limits: { memory: 256Mi }
