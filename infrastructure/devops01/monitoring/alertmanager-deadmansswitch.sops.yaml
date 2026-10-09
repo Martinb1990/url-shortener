@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: alertmanager-deadmansswitch
+    namespace: monitoring
+type: Opaque
+stringData:
+    url: ENC[AES256_GCM,data:S923qF5ASAPLj52Ge7FRmqFKb3CMZgRN1eJDmaDyU0MOydVkXP6WYP4FskSIEppKugfzeHdnYX0=,iv:RVVKTLWMHSCDZmWRt5l1zjFpvbJyk5hAI5sGfry0K9A=,tag:QuoOkMcZ8Ir1oIjG9Gk65Q==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBibVY2bHVSS1dyVXNxSjBV
+            bVdNektzT08zcGx3RG1WZTV4cTJCRDZxYUhvCmF1bEhxUTk0clhHWFdyQlZadlJq
+            UVdEcGVlU3BGMWVhK1VsbGwvQU5KOEEKLS0tIDN4STQydXUybnl6UGtKaTMxK0lR
+            VjdSVkUrWFdWVDdLN0RPUkxCcFZlVG8KdIVP4JSqU0K1BY9zF/RYtXFx5UOlZC/G
+            WCeE5q5jIM4Ar2o5y9HPeeby9KbEF2t5iNHYAdGenavsWAPA8PLqXg==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age143zk4xcwfzwsyahkuwx5ednndsqhx88tfgkh5xs9mlpgjq04tscssa42t8
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-10-09T15:18:41Z"
+    mac: ENC[AES256_GCM,data:XuN22w6q2FR2A3tGBFzlRHnn0wTUgQgdhrV0IGqaiWF6MhGI7/a3y4cPoFmx+O3Tjy6dIlzzFVZJyiYYZB7F95TPXw7tXVt/d4byEVGku6yxBHA96WGU+siUqj0lFVQalrFa+ybTLIv3GkYEPyaAI80Cub+uBvgU9St5eYySEW0=,iv:ZY+k7ZROP/XxNDstBooY72BVfDi4bnoSmui9K6coMPg=,tag:b3wowwOBniO1/yS41sYWVQ==,type:str]
+    version: 3.13.3

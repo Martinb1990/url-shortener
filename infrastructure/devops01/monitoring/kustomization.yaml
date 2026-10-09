@@ -5,6 +5,7 @@ resources:
   - helmrepositories.yaml
   - grafana-admin.sops.yaml
   - alertmanager-discord.sops.yaml
+  - alertmanager-deadmansswitch.sops.yaml
   - kube-prometheus-stack.yaml
   - loki.yaml
   - alloy.yaml
