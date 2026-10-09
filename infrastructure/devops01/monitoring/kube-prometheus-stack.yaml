@@ -76,7 +76,7 @@ spec:
           limits: { memory: 96Mi }
         # Mounted at /etc/alertmanager/secrets/<name>/; the webhook URL stays
         # out of the Alertmanager config (and out of git, via SOPS).
-        secrets: [alertmanager-discord]
+        secrets: [alertmanager-discord, alertmanager-deadmansswitch]
       config:
         route:
           group_by: ["alertname", "namespace"]
@@ -85,14 +85,26 @@ spec:
           repeat_interval: 4h
           receiver: "null"
           routes:
-            # Watchdog fires constantly to prove the alert pipeline works;
+            # Dead man's switch: Watchdog always fires, so Alertmanager pings
+            # healthchecks.io every minute. If the pings stop (cluster, network
+            # or VM down, or Alertmanager unable to send, as on 2026-10-07),
+            # healthchecks.io notices from the outside and emails the owner.
+            - matchers: ['alertname = "Watchdog"']
+              receiver: deadmansswitch
+              group_wait: 0s
+              group_interval: 1m
+              repeat_interval: 1m
             # InfoInhibitor only exists to mute "info" alerts.
-            - matchers: ['alertname =~ "Watchdog|InfoInhibitor"']
+            - matchers: ['alertname = "InfoInhibitor"']
               receiver: "null"
             - matchers: ['severity =~ "warning|critical"']
               receiver: discord
         receivers:
           - name: "null"
+          - name: deadmansswitch
+            webhook_configs:
+              - url_file: /etc/alertmanager/secrets/alertmanager-deadmansswitch/url
+                send_resolved: false
           - name: discord
             discord_configs:
               - webhook_url_file: /etc/alertmanager/secrets/alertmanager-discord/webhook-url

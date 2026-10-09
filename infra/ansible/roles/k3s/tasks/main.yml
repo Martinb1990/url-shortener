@@ -66,6 +66,39 @@
   changed_when: false
   when: not ansible_check_mode
 
+- name: Check that kube-proxy's chain is visible to the host iptables
+  # k3s-netguard restarts k3s when this chain is missing. If this host's
+  # iptables can't see it at all (e.g. a legacy/nft mismatch), the guard
+  # would misfire, so stop here instead of installing it.
+  ansible.builtin.command:
+    cmd: iptables -t nat -S KUBE-SERVICES
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Install network self-heal script
+  ansible.builtin.template:
+    src: k3s-netguard.sh.j2
+    dest: /usr/local/sbin/k3s-netguard.sh
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install network self-heal unit and timer
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: [k3s-netguard.service, k3s-netguard.timer]
+
+- name: Enable network self-heal timer
+  ansible.builtin.systemd_service:
+    name: k3s-netguard.timer
+    enabled: true
+    state: started
+    daemon_reload: true
+
 - name: Create .kube directory for {{ k3s_kubeconfig_user }}
   ansible.builtin.file:
     path: "/home/{{ k3s_kubeconfig_user }}/.kube"

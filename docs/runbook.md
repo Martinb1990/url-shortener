@@ -93,6 +93,20 @@ kubectl -n $NS logs deploy/url-shortener-redis --tail=30
 
 ---
 
+## Site down but no Discord alert / healthchecks.io email
+
+**Meaning:** the in-cluster pipeline can't deliver (the healthchecks.io email or a failed `Uptime` run told you). Most likely the pod network is broken. On 2026-10-07 a host firewall reload (server-baseline re-apply) removed k3s's rules: pod DNS failed for ~44h, the app went not-ready, Flux stalled, and 2,646 Discord sends failed.
+
+**Check**
+
+```bash
+kubectl -n url-shortener logs deploy/url-shortener --tail=5     # "Temporary failure in name resolution"?
+journalctl -t k3s-netguard --since -1h                           # did the self-heal act?
+systemctl status k3s-netguard.timer
+```
+
+**Fix:** `k3s-netguard.timer` re-adds the firewall exceptions every minute and restarts k3s if its chains were wiped (at most once per 10 min). If it didn't heal: `sudo systemctl restart k3s` (running pods are not restarted), then `flux reconcile kustomization flux-system --with-source`.
+
 ## Rollback
 
 Deploys are git commits by `fluxcdbot`. To go back:

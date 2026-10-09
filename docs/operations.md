@@ -55,7 +55,9 @@ The app is public at **https://shortly-martin.duckdns.org** (Let's Encrypt via c
 | Prometheus | Metrics: app (via ServiceMonitor), Kubernetes, node. 3 days / 3 GB retention | in-cluster only |
 | Grafana | Dashboards + Explore for metrics and logs | http://localhost:3000 through the tunnel (`-L 3000:localhost:3000`); not on the public ingress |
 | Loki + Alloy | Logs from every pod, 3 days | Grafana → Explore → Loki |
-| Alertmanager | Routes alerts (currently to a null receiver) | in-cluster only |
+| Alertmanager | Warning/critical alerts to Discord; Watchdog to healthchecks.io (dead man's switch) | in-cluster only |
+| healthchecks.io | Emails the owner if Alertmanager's per-minute Watchdog ping stops (cluster, network or VM down) | external |
+| GitHub Actions `Uptime` | Every 15 min from GitHub's network: home page, `/readyz`, HTTP→HTTPS, cert ≥ 14 days | external |
 
 Prometheus and Alertmanager have no login, so they get no ingress. Use Grafana, or a port-forward:
 

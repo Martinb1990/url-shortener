@@ -1,0 +1,47 @@
+name: Uptime
+
+# Outside-in check of the live site from GitHub's network, independent of
+# the cluster (whose own alerting can fail with it, as on 2026-10-07).
+# A failed scheduled run emails the repo owner via GitHub notifications.
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: uptime
+  cancel-in-progress: false
+
+env:
+  SITE: https://shortly-martin.duckdns.org
+  HOST: shortly-martin.duckdns.org
+  CERT_MIN_DAYS: "14"
+
+jobs:
+  check:
+    name: Live site
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Home page over HTTPS
+        run: |
+          body=$(curl -fsS --retry 3 --retry-all-errors --retry-delay 10 -m 15 "$SITE/")
+          grep -q 'Shortly' <<<"$body" || { echo "::error::home page loaded but content is wrong"; exit 1; }
+      - name: Backend ready (app reaches PostgreSQL and Redis)
+        run: |
+          ready=$(curl -fsS --retry 3 --retry-all-errors --retry-delay 10 -m 15 "$SITE/readyz")
+          echo "$ready"
+          grep -q '"status":"ready"' <<<"$ready" || { echo "::error::/readyz is not ready"; exit 1; }
+      - name: HTTP redirects to HTTPS
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' --retry 3 --retry-delay 10 -m 15 "http://$HOST/")
+          [[ $code == 301 || $code == 308 ]] || { echo "::error::http:// returned $code, expected a redirect"; exit 1; }
+      - name: TLS certificate not close to expiry
+        run: |
+          end=$(echo | openssl s_client -connect "$HOST:443" -servername "$HOST" 2>/dev/null | openssl x509 -noout -enddate | cut -d= -f2)
+          days=$(( ($(date -d "$end" +%s) - $(date +%s)) / 86400 ))
+          echo "certificate expires $end ($days days)"
+          (( days >= CERT_MIN_DAYS )) || { echo "::error::certificate expires in $days days (cert-manager renewal may be failing)"; exit 1; }
