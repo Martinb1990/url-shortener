@@ -16,6 +16,20 @@
     state: link
   loop: [kubectl, crictl, ctr]
 
+- name: Raise inotify limits for a Kubernetes node
+  # Ubuntu's default of 128 inotify instances per user is exhausted by the
+  # containers k3s runs as root (sidecars, log shippers, controllers), which
+  # surfaced as systemd "Failed to allocate directory watch: Too many open
+  # files" during an apt upgrade. Common Kubernetes node values.
+  ansible.posix.sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    sysctl_file: /etc/sysctl.d/90-k3s-inotify.conf
+    reload: true
+  loop:
+    - { name: fs.inotify.max_user_instances, value: "{{ k3s_inotify_max_user_instances }}" }
+    - { name: fs.inotify.max_user_watches, value: "{{ k3s_inotify_max_user_watches }}" }
+
 - name: Create k3s config directory
   ansible.builtin.file:
     path: /etc/rancher/k3s
