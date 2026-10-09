@@ -1,0 +1,8 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Re-apply k3s firewall exceptions; restart k3s if its rules were wiped
+After=k3s.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/k3s-netguard.sh

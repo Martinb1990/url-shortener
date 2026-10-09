@@ -1,0 +1,25 @@
+#!/bin/sh
+# {{ ansible_managed }}
+# Self-heals the k3s network after a host firewall reload (e.g. a
+# server-baseline re-apply), which on 2026-10-07 silently broke pod DNS
+# for ~44h. Run every minute by k3s-netguard.timer.
+#  1. Re-add our firewall exceptions if missing (always safe).
+#  2. If kube-proxy's NAT chain is gone (the whole ruleset was replaced),
+#     restart k3s so it rebuilds its rules; running pods are not restarted.
+#     At most once per {{ k3s_netguard_min_restart_interval }}s, so a wrong detection can't loop.
+set -eu
+/usr/local/sbin/k3s-firewall.sh
+
+systemctl is-active --quiet k3s || exit 0
+iptables -t nat -S KUBE-SERVICES >/dev/null 2>&1 && exit 0
+
+stamp=/run/k3s-netguard.last-restart
+now=$(date +%s)
+last=$(cat "$stamp" 2>/dev/null || echo 0)
+if [ $((now - last)) -lt {{ k3s_netguard_min_restart_interval }} ]; then
+  logger -t k3s-netguard "KUBE-SERVICES chain missing; restarted k3s $((now - last))s ago, not again yet"
+  exit 1
+fi
+echo "$now" > "$stamp"
+logger -t k3s-netguard "KUBE-SERVICES chain missing (firewall was reloaded?); restarting k3s"
+systemctl restart k3s
