@@ -4,3 +4,5 @@ k3s_kubeconfig_user: "{{ devops_user }}"
 k3s_pod_cidr: 10.42.0.0/16
 k3s_service_cidr: 10.43.0.0/16
 k3s_netguard_min_restart_interval: 600
+k3s_inotify_max_user_instances: 1024
+k3s_inotify_max_user_watches: 524288
