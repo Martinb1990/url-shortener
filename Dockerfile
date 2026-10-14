@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ---- build stage: compile/install dependencies into a virtualenv ----
-FROM python:3.13-slim AS builder
+FROM python:3.14-slim AS builder
 
 ENV PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
 RUN python -m venv /opt/venv
@@ -14,7 +14,7 @@ RUN pip install --require-hashes -r requirements.txt \
  && pip uninstall -y pip
 
 # ---- runtime stage: slim image, non-root user, only what's needed ----
-FROM python:3.13-slim AS runtime
+FROM python:3.14-slim AS runtime
 
 LABEL org.opencontainers.image.source="https://github.com/Martinb1990/url-shortener" \
       org.opencontainers.image.description="Shortly - a small URL shortener" \
