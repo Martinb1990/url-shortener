@@ -67,7 +67,7 @@ jobs:
         run: >
           pytest --cov=app --cov-report=term-missing --cov-report=xml
           --cov-fail-under=80 --junitxml=junit.xml
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: test-results-py${{ matrix.python }}
@@ -175,7 +175,7 @@ jobs:
           --sarif-output=semgrep.sarif
       - name: Upload results to GitHub Security tab
         if: always() && hashFiles('semgrep.sarif') != ''
-        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
         with:
           sarif_file: semgrep.sarif
           category: semgrep
@@ -195,7 +195,7 @@ jobs:
           --format sarif --output /src/trivy-fs.sarif /src
       - name: Upload results to GitHub Security tab
         if: always() && hashFiles('trivy-fs.sarif') != ''
-        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
         with:
           sarif_file: trivy-fs.sarif
           category: trivy-fs
@@ -248,7 +248,7 @@ jobs:
           "$TRIVY_IMAGE" image --format sarif --output /out/trivy-image.sarif url-shortener:local
       - name: Upload results to GitHub Security tab
         if: always() && hashFiles('trivy-image.sarif') != ''
-        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
         with:
           sarif_file: trivy-image.sarif
           category: trivy-image
@@ -263,7 +263,7 @@ jobs:
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock
           -v "$PWD:/out" -v trivy-cache:/root/.cache/trivy
           "$TRIVY_IMAGE" image --format cyclonedx --output /out/sbom.cdx.json url-shortener:local
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sbom
           path: sbom.cdx.json
@@ -339,7 +339,7 @@ jobs:
             zap-baseline.py -t http://localhost:8080 -c rules.tsv -r zap-report.html -J zap-report.json
       - name: Upload load + DAST reports
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: load-and-dast-reports
           path: |
