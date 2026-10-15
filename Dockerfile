@@ -26,10 +26,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 # Remove the base image's pip (and its vendored urllib3/msgpack/pkg_resources):
 # unused at runtime, and a recurring source of CVEs and attack surface.
+# Paths use python3* so a Python version bump can't silently skip this (it
+# did for 3.13 -> 3.14), and the build fails if pip is still importable.
 RUN rm -rf /usr/local/bin/pip* \
-           /usr/local/lib/python3.13/site-packages/pip \
-           /usr/local/lib/python3.13/site-packages/pip-*.dist-info \
-           /usr/local/lib/python3.13/ensurepip \
+           /usr/local/lib/python3*/site-packages/pip \
+           /usr/local/lib/python3*/site-packages/pip-*.dist-info \
+           /usr/local/lib/python3*/ensurepip \
+ && if python -c 'import pip' 2>/dev/null; then echo "pip is still in the runtime image" >&2; exit 1; fi \
  && groupadd --system --gid 10001 app \
  && useradd --system --uid 10001 --gid app --no-create-home app
 
