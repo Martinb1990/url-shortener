@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ---- build stage: compile/install dependencies into a virtualenv ----
-FROM python:3.13-slim AS builder
+FROM python:3.14-slim AS builder
 
 ENV PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
 RUN python -m venv /opt/venv
@@ -14,7 +14,7 @@ RUN pip install --require-hashes -r requirements.txt \
  && pip uninstall -y pip
 
 # ---- runtime stage: slim image, non-root user, only what's needed ----
-FROM python:3.13-slim AS runtime
+FROM python:3.14-slim AS runtime
 
 LABEL org.opencontainers.image.source="https://github.com/Martinb1990/url-shortener" \
       org.opencontainers.image.description="Shortly - a small URL shortener" \
@@ -26,10 +26,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 # Remove the base image's pip (and its vendored urllib3/msgpack/pkg_resources):
 # unused at runtime, and a recurring source of CVEs and attack surface.
+# Paths use python3* so a Python version bump can't silently skip this (it
+# did for 3.13 -> 3.14), and the build fails if pip is still importable.
 RUN rm -rf /usr/local/bin/pip* \
-           /usr/local/lib/python3.13/site-packages/pip \
-           /usr/local/lib/python3.13/site-packages/pip-*.dist-info \
-           /usr/local/lib/python3.13/ensurepip \
+           /usr/local/lib/python3*/site-packages/pip \
+           /usr/local/lib/python3*/site-packages/pip-*.dist-info \
+           /usr/local/lib/python3*/ensurepip \
+ && if python -c 'import pip' 2>/dev/null; then echo "pip is still in the runtime image" >&2; exit 1; fi \
  && groupadd --system --gid 10001 app \
  && useradd --system --uid 10001 --gid app --no-create-home app
 
