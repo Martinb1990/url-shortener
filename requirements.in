@@ -1,5 +1,5 @@
 # Direct runtime dependencies. Edit this file, then run `make lock`.
-fastapi~=0.143
+fastapi~=0.162
 uvicorn[standard]~=0.54
 sqlalchemy~=2.1
 psycopg[binary]~=3.3
